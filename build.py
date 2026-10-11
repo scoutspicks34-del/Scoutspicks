@@ -155,7 +155,7 @@ ALIAS = {
 
 
 def norm(s):
-    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode().lower()
+    s = unicodedata.normalize("NFKD", s.replace("ø", "o").replace("Ø", "O").replace("æ", "ae")).encode("ascii", "ignore").decode().lower()
     s = re.sub(r"[^a-z0-9 ]", " ", s.replace("'", ""))
     return re.sub(r"\s+", " ", s).strip()
 
@@ -350,6 +350,101 @@ def csv_fixtures(params, today, text=None):
     return out, note
 
 
+# ------------------------------------------------------------------ Champions League (Elo)
+UCL_TEAMS = ["AEK Athens", "Arsenal", "Aston Villa", "Atlético Madrid", "Barcelona", "Bayern Munich", "Bodø/Glimt",
+             "Borussia Dortmund", "Club Brugge", "Como", "Feyenoord", "Fenerbahçe", "Galatasaray", "Inter Milan",
+             "LASK Linz", "Lens", "Lille", "Liverpool", "Manchester City", "Manchester United", "Napoli",
+             "Paris Saint-Germain", "Porto", "PSV Eindhoven", "Real Betis", "Real Madrid", "RB Leipzig", "Roma",
+             "Sabah", "Shakhtar Donetsk", "Slavia Prague", "Slovan Bratislava", "Sporting Lisbon", "Stuttgart",
+             "Villarreal", "Viking"]
+# fecha, hora de Honduras, local, visitante (jornadas 2 y 3 de la fase de liga 2026/27)
+UCL_FIXTURES = [
+    ("2026-10-13", "10:45", "Lens", "Sporting Lisbon"), ("2026-10-13", "10:45", "Sabah", "Slavia Prague"),
+    ("2026-10-13", "13:00", "Arsenal", "Lille"), ("2026-10-13", "13:00", "Atlético Madrid", "Manchester United"),
+    ("2026-10-13", "13:00", "Inter Milan", "Club Brugge"), ("2026-10-13", "13:00", "Galatasaray", "Barcelona"),
+    ("2026-10-13", "13:00", "RB Leipzig", "PSV Eindhoven"), ("2026-10-13", "13:00", "Viking", "Bayern Munich"),
+    ("2026-10-13", "13:00", "Villarreal", "Napoli"),
+    ("2026-10-14", "10:45", "Feyenoord", "Como"), ("2026-10-14", "10:45", "LASK Linz", "Liverpool"),
+    ("2026-10-14", "13:00", "Roma", "Real Madrid"), ("2026-10-14", "13:00", "Aston Villa", "Fenerbahçe"),
+    ("2026-10-14", "13:00", "Shakhtar Donetsk", "AEK Athens"), ("2026-10-14", "13:00", "Bodø/Glimt", "Borussia Dortmund"),
+    ("2026-10-14", "13:00", "Manchester City", "Paris Saint-Germain"), ("2026-10-14", "13:00", "Real Betis", "Porto"),
+    ("2026-10-14", "13:00", "Slovan Bratislava", "Stuttgart"),
+    ("2026-10-20", "10:45", "Fenerbahçe", "Slavia Prague"), ("2026-10-20", "10:45", "Sabah", "Borussia Dortmund"),
+    ("2026-10-20", "13:00", "Roma", "Slovan Bratislava"), ("2026-10-20", "13:00", "Porto", "PSV Eindhoven"),
+    ("2026-10-20", "13:00", "Liverpool", "Villarreal"), ("2026-10-20", "13:00", "Manchester City", "AEK Athens"),
+    ("2026-10-20", "13:00", "Paris Saint-Germain", "Barcelona"), ("2026-10-20", "13:00", "Napoli", "Bodø/Glimt"),
+    ("2026-10-20", "13:00", "Stuttgart", "Atlético Madrid"),
+    ("2026-10-21", "10:45", "Como", "Manchester United"), ("2026-10-21", "10:45", "Lille", "Galatasaray"),
+    ("2026-10-21", "13:00", "Aston Villa", "Viking"), ("2026-10-21", "13:00", "Club Brugge", "Lens"),
+    ("2026-10-21", "13:00", "Bayern Munich", "Arsenal"), ("2026-10-21", "13:00", "Inter Milan", "Shakhtar Donetsk"),
+    ("2026-10-21", "13:00", "Real Madrid", "RB Leipzig"), ("2026-10-21", "13:00", "Real Betis", "Feyenoord"),
+    ("2026-10-21", "13:00", "Sporting Lisbon", "LASK Linz"),
+]
+ELO_NAMES = {
+    "bayern munich": ["bayern"], "manchester city": ["man city"], "manchester united": ["man united"],
+    "paris saint germain": ["paris sg", "psg"], "atletico madrid": ["atletico"], "rb leipzig": ["leipzig"],
+    "borussia dortmund": ["dortmund"], "inter milan": ["inter"], "sporting lisbon": ["sporting"],
+    "shakhtar donetsk": ["shakhtar"], "slavia prague": ["slavia praha", "slavia prague"],
+    "bodo glimt": ["bodoe glimt", "bodo glimt"], "fenerbahce": ["fenerbahce"], "real betis": ["betis"],
+    "psv eindhoven": ["psv"], "club brugge": ["brugge", "club brugge"], "aek athens": ["aek"],
+    "lask linz": ["lask"], "slovan bratislava": ["slovan"], "sabah": ["sabah", "sabah baku"],
+}
+
+
+def ucl_params(today, text=None):
+    """Elo de cada club (clubelo.com) para la Champions League."""
+    if text is None:
+        for url in (f"https://api.clubelo.com/{today.isoformat()}", f"http://api.clubelo.com/{today.isoformat()}"):
+            try:
+                r = requests.get(url, timeout=40, headers={"User-Agent": "Mozilla/5.0"})
+                r.raise_for_status()
+                text = r.text
+                break
+            except Exception as e:  # noqa: BLE001
+                log(f"  clubelo {url}: {e}")
+    if not text:
+        return None
+    try:
+        df = pd.read_csv(io.StringIO(text))
+        table = {norm(str(c)): float(e) for c, e in zip(df["Club"], df["Elo"])}
+    except Exception as e:  # noqa: BLE001
+        log(f"  clubelo: formato inesperado ({e})")
+        return None
+    elo = {}
+    for team in UCL_TEAMS:
+        n = norm(team)
+        cands = [n] + ELO_NAMES.get(n, [])
+        v = next((table[c] for c in cands if c in table), None)
+        if v is None:
+            close = difflib.get_close_matches(n, list(table), n=1, cutoff=0.85)
+            v = table[close[0]] if close else None
+        if v is None:
+            log(f"  Elo no encontrado: {team}")
+        else:
+            elo[team] = round(v, 1)
+    if len(elo) < 20:
+        log("  Elo: demasiados equipos sin dato; se omite la Champions")
+        return None
+    return {"name": "Champions League", "kind": "elo", "elo": elo, "hfa": 100, "T": 2.9,
+            "updated": today.isoformat(), "n": 0, "models": {}, "teams": sorted(elo), "form": {}, "inj": None}
+
+
+def ucl_fixtures(params, today):
+    if "ucl" not in params:
+        return []
+    out = []
+    now = dt.datetime.now(dt.timezone(HN))
+    for d, hm, h, a in UCL_FIXTURES:
+        if h not in params["ucl"]["elo"] or a not in params["ucl"]["elo"]:
+            continue
+        day = dt.date.fromisoformat(d)
+        loc = dt.datetime.fromisoformat(f"{d}T{hm}").replace(tzinfo=dt.timezone(HN))
+        if not (today <= day <= today + dt.timedelta(days=10)) or loc < now - dt.timedelta(hours=2):
+            continue
+        out.append({"id": f"ucl-{d}-{h}", "lg": "ucl", "date": f"{d}T{hm}", "status": "NS", "h": h, "a": a, "odds": {}})
+    return out
+
+
 def build(template, out_path="docs/index.html"):
     now = dt.datetime.utcnow()
     local = now + HN
@@ -367,10 +462,16 @@ def build(template, out_path="docs/index.html"):
             log(f"  {v['name']} omitida: {e}")
     if not params:
         raise SystemExit("No se pudo cargar ninguna liga; no se actualiza la página.")
+    u = ucl_params(today)
+    if u:
+        params["ucl"] = u
     if os.environ.get("USE_API_FOOTBALL") == "1":
         fixtures, note = api_enrich(params, today)
     else:
         fixtures, note = csv_fixtures(params, today)
+    fixtures = sorted(fixtures + ucl_fixtures(params, today), key=lambda x: x["date"])
+    if "ucl" not in params:
+        note += " (Champions: no se pudo leer clubelo.com.)"
     log(note)
     data = {"leagues": params, "fixtures": fixtures, "note": note,
             "generated": local.strftime("%Y-%m-%d %H:%M") + " (hora de Honduras)"}
@@ -569,10 +670,23 @@ const LINES = {
   shots:{n:"Tiros totales",tot:[24.5,26.5,28.5,30.5],team:[11.5,13.5,15.5]}
 };
 
+/* ---------- Elo -> goles esperados (Champions) ---------- */
+function eloLam(E,T){
+  const score=s=>{const m=scoreMatrix((T+s)/2,(T-s)/2);let w=0,d=0;
+    for(let i=0;i<m.length;i++)for(let j=0;j<m.length;j++){if(i>j)w+=m[i][j];else if(i===j)d+=m[i][j];}
+    return w+0.5*d;};
+  let lo=-T*0.95, hi=T*0.95;
+  for(let k=0;k<40;k++){const mid=(lo+hi)/2; if(score(mid)<E) lo=mid; else hi=mid;}
+  const s=(lo+hi)/2; return [(T+s)/2,(T-s)/2];
+}
+
 /* ---------- cálculo de un partido ---------- */
 function compute(h, a, fh, fa){
   const L = DATA.leagues[league], out = {rows:[], chips:[]};
-  const g = L.models.goles, l0 = lam(g,h,a), lh = l0[0]*fh, la = l0[1]*fa, m = scoreMatrix(lh,la);
+  let l0;
+  if(L.kind==="elo"){ const E=1/(1+Math.pow(10,-((L.elo[h]+L.hfa-L.elo[a])/400))); l0=eloLam(E,L.T); }
+  else { l0=lam(L.models.goles,h,a); }
+  const lh = l0[0]*fh, la = l0[1]*fa, m = scoreMatrix(lh,la);
   let pH=0,pD=0,pA=0,o15=0,o25=0,o35=0,bt=0;
   for(let i=0;i<m.length;i++)for(let j=0;j<m.length;j++){
     const v=m[i][j]; if(i>j)pH+=v; else if(i===j)pD+=v; else pA+=v;
@@ -621,13 +735,14 @@ function injHtml(h,a){
 }
 function render(){
   const h=$("home").value,a=$("away").value,L=DATA.leagues[league];
-  $("upd").textContent=`${L.name} · datos hasta ${L.updated} · actualizado ${DATA.generated||"—"}`;
+  $("upd").textContent=L.kind==="elo"?`${L.name} · ranking Elo del ${L.updated} · actualizado ${DATA.generated||"—"}`
+    :`${L.name} · datos hasta ${L.updated} · actualizado ${DATA.generated||"—"}`;
   if(h===a){$("mk").innerHTML=`<tr><td colspan="6" class="empty">Elige dos equipos distintos.</td></tr>`;return;}
   const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
   cur=compute(h,a,fh,fa);
   $("hn").textContent=h; $("an").textContent=a;
   $("hf").innerHTML=formHtml(h); $("af").innerHTML=formHtml(a);
-  $("inj").innerHTML=injHtml(h,a);
+  $("inj").innerHTML=L.kind==="elo"?`<div class="none">Champions League: las probabilidades salen del ranking Elo de los clubes (sin corners ni tiros, no hay datos comparables entre ligas). No están validadas con partidos pasados de Champions.</div>`:injHtml(h,a);
   $("xh").textContent=cur.lh.toFixed(2); $("xa").textContent=cur.la.toFixed(2);
   const [pH,pD,pA]=cur.p;
   $("stack").innerHTML=`<div class="h" style="flex:${pH}">${pct(pH)}</div><div style="flex:${pD}">${pct(pD)}</div><div class="a" style="flex:${pA}">${pct(pA)}</div>`;
