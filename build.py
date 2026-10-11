@@ -322,7 +322,7 @@ def csv_fixtures(params, today, text=None):
         except Exception:  # noqa: BLE001
             hh, mm = 12, 0
         loc = dt.datetime(d.year, d.month, d.day, hh, mm, tzinfo=uk).astimezone(hn)
-        if not (today <= loc.date() <= today + dt.timedelta(days=3)):
+        if not (today <= loc.date() <= today + dt.timedelta(days=7)):
             continue
         teams = params[key]["teams"]
         h, a = match_team(str(row["HomeTeam"]), teams), match_team(str(row["AwayTeam"]), teams)
@@ -340,9 +340,10 @@ def csv_fixtures(params, today, text=None):
     out.sort(key=lambda x: x["date"])
     if out:
         con = sum(1 for f in out if f["odds"])
-        note = f"{len(out)} partidos de hoy a los próximos 3 días (fuente: football-data.co.uk). Cuotas promedio en {con}."
+        note = f"{len(out)} partidos de hoy a los próximos 7 días (fuente: football-data.co.uk). Cuotas promedio en {con}."
     else:
-        note = "football-data.co.uk no tiene partidos de estas ligas en los próximos 3 días. Elige los equipos a mano."
+        info = f"{len(df)} filas; ligas: {sorted(set(str(x) for x in df.get('Div', [])))}; fechas: {list(df.get('Date', []))[:3]}"
+        note = "football-data.co.uk no tiene partidos de estas ligas en los próximos 7 días. Elige los equipos a mano. (" + info + ")"
     return out, note
 
 
