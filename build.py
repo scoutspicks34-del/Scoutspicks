@@ -471,7 +471,8 @@ def build(template, out_path="docs/index.html"):
         fixtures, note = csv_fixtures(params, today)
     fixtures = sorted(fixtures + ucl_fixtures(params, today), key=lambda x: x["date"])
     if "ucl" not in params:
-        note += " (Champions: no se pudo leer clubelo.com.)"
+        det = [l.strip() for l in LOG if "clubelo" in l or "Elo" in l]
+        note += " (Champions: no se pudo leer clubelo.com. " + (det[-1][:260] if det else "sin detalle") + ")"
     log(note)
     data = {"leagues": params, "fixtures": fixtures, "note": note,
             "generated": local.strftime("%Y-%m-%d %H:%M") + " (hora de Honduras)"}
