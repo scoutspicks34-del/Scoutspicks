@@ -294,6 +294,7 @@ def csv_fixtures(params, today, text=None):
     except Exception as e:  # noqa: BLE001
         log(f"  fixtures.csv: no se pudo leer ({e})")
         return [], "No se pudo leer la lista de partidos. Elige los equipos a mano."
+    df.columns = [re.sub(r"[^\x20-\x7e]", "", str(c)).strip() for c in df.columns]
     code_to_key = {v["code"]: k for k, v in LEAGUES.items()}
     uk, hn = ZoneInfo("Europe/London"), ZoneInfo("America/Tegucigalpa")
 
