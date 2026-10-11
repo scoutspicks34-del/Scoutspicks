@@ -280,6 +280,72 @@ def api_enrich(params, today):
     return fixtures, note
 
 
+def csv_fixtures(params, today, text=None):
+    """Próximos partidos y cuotas promedio desde football-data.co.uk/fixtures.csv (sin clave)."""
+    from zoneinfo import ZoneInfo
+    try:
+        if text is None:
+            r = requests.get("https://www.football-data.co.uk/fixtures.csv", timeout=40,
+                             headers={"User-Agent": "Mozilla/5.0"})
+            r.raise_for_status()
+            df = pd.read_csv(io.BytesIO(r.content), encoding="latin-1")
+        else:
+            df = pd.read_csv(io.StringIO(text))
+    except Exception as e:  # noqa: BLE001
+        log(f"  fixtures.csv: no se pudo leer ({e})")
+        return [], "No se pudo leer la lista de partidos. Elige los equipos a mano."
+    code_to_key = {v["code"]: k for k, v in LEAGUES.items()}
+    uk, hn = ZoneInfo("Europe/London"), ZoneInfo("America/Tegucigalpa")
+
+    def num(row, cols):
+        for c in cols:
+            if c in row and pd.notna(row[c]):
+                try:
+                    v = float(row[c])
+                    if v > 1:
+                        return round(v, 2)
+                except Exception:  # noqa: BLE001
+                    pass
+        return None
+
+    out = []
+    for _, row in df.iterrows():
+        key = code_to_key.get(str(row.get("Div", "")).strip())
+        if not key or key not in params:
+            continue
+        d = pd.to_datetime(row.get("Date"), dayfirst=True, errors="coerce")
+        if pd.isna(d):
+            continue
+        tm = str(row.get("Time", "") or "12:00")
+        try:
+            hh, mm = [int(x) for x in tm.split(":")[:2]]
+        except Exception:  # noqa: BLE001
+            hh, mm = 12, 0
+        loc = dt.datetime(d.year, d.month, d.day, hh, mm, tzinfo=uk).astimezone(hn)
+        if not (today <= loc.date() <= today + dt.timedelta(days=3)):
+            continue
+        teams = params[key]["teams"]
+        h, a = match_team(str(row["HomeTeam"]), teams), match_team(str(row["AwayTeam"]), teams)
+        if not h or not a or h == a:
+            log(f"  sin equivalencia: {row.get('HomeTeam')} / {row.get('AwayTeam')}")
+            continue
+        odds = {}
+        for k, cols in {"1": ["AvgH", "B365H"], "X": ["AvgD", "B365D"], "2": ["AvgA", "B365A"],
+                        "o:goals:2.5": ["Avg>2.5", "B365>2.5"], "u:goals:2.5": ["Avg<2.5", "B365<2.5"]}.items():
+            v = num(row, cols)
+            if v:
+                odds[k] = v
+        out.append({"id": len(out) + 1, "lg": key, "date": loc.strftime("%Y-%m-%dT%H:%M"),
+                    "status": "NS", "h": h, "a": a, "odds": odds})
+    out.sort(key=lambda x: x["date"])
+    if out:
+        con = sum(1 for f in out if f["odds"])
+        note = f"{len(out)} partidos de hoy a los próximos 3 días (fuente: football-data.co.uk). Cuotas promedio en {con}."
+    else:
+        note = "football-data.co.uk no tiene partidos de estas ligas en los próximos 3 días. Elige los equipos a mano."
+    return out, note
+
+
 def build(template, out_path="docs/index.html"):
     now = dt.datetime.utcnow()
     local = now + HN
@@ -297,7 +363,10 @@ def build(template, out_path="docs/index.html"):
             log(f"  {v['name']} omitida: {e}")
     if not params:
         raise SystemExit("No se pudo cargar ninguna liga; no se actualiza la página.")
-    fixtures, note = api_enrich(params, today)
+    if os.environ.get("USE_API_FOOTBALL") == "1":
+        fixtures, note = api_enrich(params, today)
+    else:
+        fixtures, note = csv_fixtures(params, today)
     log(note)
     data = {"leagues": params, "fixtures": fixtures, "note": note,
             "generated": local.strftime("%Y-%m-%d %H:%M") + " (hora de Honduras)"}
@@ -540,7 +609,7 @@ function formHtml(t){return (DATA.leagues[league].form[t]||"").split("").map(c=>
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function injHtml(h,a){
   const L=DATA.leagues[league];
-  if(!L.inj) return `<div class="none">Lesionados: sin datos (la API no respondió o no hay clave).</div>`;
+  if(!L.inj) return `<div class="none">Lesionados: no se cargan automáticamente. Usa el ajuste manual de abajo si hay bajas importantes.</div>`;
   const one=t=>{const l=L.inj[t]||[];
     return l.length?`<div><b>${esc(t)}</b>: ${l.map(x=>esc(x[0])+(x[1]?" ("+esc(x[1])+")":"")).join(", ")}</div>`
                    :`<div class="none"><b>${esc(t)}</b>: sin bajas reportadas</div>`;};
@@ -573,7 +642,7 @@ function render(){
   if(fx&&fx.odds){
     cur.rows.forEach((r,i)=>{const v=r.key&&fx.odds[r.key]; if(v){$("o"+i).value=v;onOdds(i);n++;}});
   }
-  $("oddsSrc").textContent=n?`Cuotas cargadas automáticamente (${n}): promedio de varias casas según la API. Puedes cambiarlas por las de tu casa.`:"";
+  $("oddsSrc").textContent=n?`Cuotas cargadas automáticamente (${n}): promedio de varias casas (football-data.co.uk). Solo vienen 1X2 y más/menos 2.5. Cámbialas por las de tu casa.`:"";
 }
 function onOdds(i){
   const r=cur.rows[i], v=parseFloat($("o"+i).value.replace(",","."));
