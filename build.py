@@ -394,14 +394,23 @@ ELO_NAMES = {
 def ucl_params(today, text=None):
     """Elo de cada club (clubelo.com) para la Champions League."""
     if text is None:
-        for url in (f"https://api.clubelo.com/{today.isoformat()}", f"http://api.clubelo.com/{today.isoformat()}"):
-            try:
-                r = requests.get(url, timeout=40, headers={"User-Agent": "Mozilla/5.0"})
-                r.raise_for_status()
-                text = r.text
+        import time
+        for back in (0, 1, 3):
+            day = (today - dt.timedelta(days=back)).isoformat()
+            for url in (f"http://api.clubelo.com/{day}", f"https://api.clubelo.com/{day}"):
+                for intento in range(2):
+                    try:
+                        r = requests.get(url, timeout=45, headers={"User-Agent": "Mozilla/5.0"})
+                        r.raise_for_status()
+                        text = r.text
+                        break
+                    except Exception as e:  # noqa: BLE001
+                        log(f"  clubelo {url}: {str(e)[:120]}")
+                        time.sleep(4)
+                if text:
+                    break
+            if text:
                 break
-            except Exception as e:  # noqa: BLE001
-                log(f"  clubelo {url}: {e}")
     if not text:
         return None
     try:
