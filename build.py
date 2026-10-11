@@ -271,7 +271,8 @@ def api_enrich(params, today):
             n_odds += bool(f["odds"])
     fixtures.sort(key=lambda x: x["date"])
     if calls_ok == 0:
-        note = "La API no respondió (revisa la clave o el plan). La página usa solo el modelo y tus cuotas."
+        errs = [l.strip() for l in LOG if l.strip().startswith("API")]
+        note = "La API no respondió (revisa la clave o el plan). La página usa solo el modelo y tus cuotas. Detalle: " + (errs[0][:300] if errs else "sin detalle")
     elif not fixtures:
         note = "La API respondió, pero no hay partidos de estas ligas hoy ni mañana."
     else:
