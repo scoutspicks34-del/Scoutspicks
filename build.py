@@ -325,6 +325,8 @@ def csv_fixtures(params, today, text=None):
         loc = dt.datetime(d.year, d.month, d.day, hh, mm, tzinfo=uk).astimezone(hn)
         if not (today <= loc.date() <= today + dt.timedelta(days=7)):
             continue
+        if loc < dt.datetime.now(hn) - dt.timedelta(hours=2):
+            continue
         teams = params[key]["teams"]
         h, a = match_team(str(row["HomeTeam"]), teams), match_team(str(row["AwayTeam"]), teams)
         if not h or not a or h == a:
