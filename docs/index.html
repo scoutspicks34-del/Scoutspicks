@@ -1,0 +1,364 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0}</style>
+<title>Scout Picks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout: columna única tipo marcador de estadio; selector de partido arriba, mercados en tabla, bitácora al final */
+:root{
+  --bg:#eef1ef; --card:#ffffff; --ink:#14201b; --muted:#5d6b64; --line:#d5ddd8;
+  --accent:#0d6b4b; --accent-ink:#ffffff; --good:#0d6b4b; --warn:#a86a00; --bad:#b3261e;
+  --warn-bg:#fbf0d9; --bad-bg:#f8e0de; --good-bg:#dcefe6; --bar:#cfd8d3;
+  --disp:"Barlow Condensed","Arial Narrow",sans-serif; --body:"Barlow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1512; --card:#161f1b; --ink:#e7eee9; --muted:#97a69e; --line:#2a3731;
+  --accent:#3fc08e; --accent-ink:#06120d; --good:#3fc08e; --warn:#e0a53a; --bad:#ef7b72;
+  --warn-bg:#352a10; --bad-bg:#3a1a18; --good-bg:#13302a; --bar:#2a3731; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1512; --card:#161f1b; --ink:#e7eee9; --muted:#97a69e; --line:#2a3731;
+  --accent:#3fc08e; --accent-ink:#06120d; --good:#3fc08e; --warn:#e0a53a; --bad:#ef7b72;
+  --warn-bg:#352a10; --bad-bg:#3a1a18; --good-bg:#13302a; --bar:#2a3731; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);padding-inline:16px;padding-block:16px 40px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--disp);margin:0;letter-spacing:.02em;text-wrap:balance}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:34px;font-weight:700;text-transform:uppercase;line-height:1}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{font-size:20px;font-weight:600;text-transform:uppercase;color:var(--muted)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font:600 15px var(--disp);letter-spacing:.04em;text-transform:uppercase;padding:7px 14px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:4px;cursor:pointer}
+.tab[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.pick{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end}
+.pick label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;min-width:0}
+select,input{font:500 16px var(--body);padding:9px 10px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);width:100%;min-width:0}
+select:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.vs{font:600 20px var(--disp);color:var(--muted);padding-bottom:8px}
+.board{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center;text-align:center}
+.board .t{font:600 18px var(--disp);text-transform:uppercase;overflow-wrap:anywhere}
+.board .xg{font:700 52px/1 var(--disp);font-variant-numeric:tabular-nums}
+.board .dash{font:600 30px var(--disp);color:var(--muted)}
+.form{display:flex;gap:3px;justify-content:center;margin-top:4px}
+.form i{font:600 11px var(--disp);font-style:normal;width:18px;height:18px;display:grid;place-items:center;border-radius:2px;color:#fff}
+.form .G{background:var(--good)} .form .E{background:#7b8780} .form .P{background:var(--bad)}
+.lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.stack{display:flex;height:34px;border-radius:4px;overflow:hidden;font:600 16px var(--disp);font-variant-numeric:tabular-nums}
+.stack div{display:grid;place-items:center;min-width:0;color:var(--ink);background:var(--bar)}
+.stack .h{background:var(--accent);color:var(--accent-ink)}
+.stack .a{background:color-mix(in srgb,var(--accent) 35%,var(--bar))}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);border-radius:4px;padding:6px 10px;font-size:13px}
+.chip b{font:700 18px var(--disp);font-variant-numeric:tabular-nums;margin-left:4px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+tr.sec td{font:600 14px var(--disp);letter-spacing:.06em;text-transform:uppercase;color:var(--accent);padding-top:14px;border-bottom:2px solid var(--line)}
+td input{width:76px;padding:5px 6px;font-size:15px;text-align:right}
+.ev{font-weight:600}
+.ev.pos{color:var(--good)} .ev.neg{color:var(--muted)}
+.flag{display:inline-block;font-size:11px;padding:2px 6px;border-radius:3px;background:var(--warn-bg);color:var(--warn);margin-left:6px;white-space:normal}
+.btn{font:600 14px var(--disp);letter-spacing:.04em;text-transform:uppercase;padding:6px 10px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.35;cursor:default}
+.note{font-size:13px;color:var(--muted);background:var(--warn-bg);border-left:3px solid var(--warn);padding:10px 12px;border-radius:3px}
+.note b{color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.stat{border:1px solid var(--line);border-radius:4px;padding:8px 10px}
+.stat b{display:block;font:700 24px var(--disp);font-variant-numeric:tabular-nums}
+.stat.p b{color:var(--good)} .stat.n b{color:var(--bad)}
+.log{display:flex;flex-direction:column}
+.entry{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.entry .m{font-weight:600;overflow-wrap:anywhere}
+.entry .d{font-size:13px;color:var(--muted)}
+.entry .act{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.pill{font:600 13px var(--disp);text-transform:uppercase;padding:3px 8px;border-radius:3px;letter-spacing:.04em}
+.pill.won{background:var(--good-bg);color:var(--good)} .pill.lost{background:var(--bad-bg);color:var(--bad)} .pill.pending{background:var(--bar);color:var(--muted)}
+.mini{font:600 13px var(--disp);padding:4px 8px;border-radius:3px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;text-transform:uppercase}
+.empty{color:var(--muted);padding:6px 0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.foot{font-size:12px;color:var(--muted)}
+.fxlist{display:flex;flex-direction:column;gap:6px}
+.fx{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;text-align:left;font:500 15px var(--body);padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:transparent;color:var(--ink);cursor:pointer;width:100%}
+.fx .tm{font:600 14px var(--disp);color:var(--muted);letter-spacing:.04em;text-transform:uppercase;grid-row:span 2;align-self:center;min-width:64px}
+.fx .lg{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.fx:hover{border-color:var(--accent)}
+.inj{font-size:13px;display:flex;flex-direction:column;gap:4px}
+.inj b{font-weight:600}
+.inj .none{color:var(--muted)}
+.adj{display:flex;flex-direction:column;gap:6px}
+.adj label{display:flex;flex-direction:column;gap:4px;flex:1;min-width:150px}
+@media (max-width:520px){.board{grid-template-columns:1fr 1fr;grid-template-areas:'s s' 'h a'}.bs{grid-area:s}.bh{grid-area:h}.ba{grid-area:a}.board .xg{font-size:48px} .pick{grid-template-columns:1fr} .vs{display:none}}
+</style>
+
+</head><body>
+<div class="wrap">
+  <header>
+    <h1>Scout <span>Picks</span></h1>
+    <div class="sub" id="upd"></div>
+  </header>
+
+  <section class="card" aria-label="Partidos próximos">
+    <h2>Partidos próximos</h2>
+    <div class="sub" id="fxNote"></div>
+    <div class="fxlist" id="fxList"></div>
+  </section>
+
+  <section class="card" aria-label="Partido">
+    <div class="tabs" id="leagueTabs" role="group" aria-label="Liga"></div>
+    <div class="pick">
+      <label>Local<select id="home"></select></label>
+      <div class="vs">vs</div>
+      <label>Visitante<select id="away"></select></label>
+    </div>
+    <div class="board">
+      <div class="bh"><div class="t" id="hn"></div><div class="form" id="hf"></div></div>
+      <div class="row bs" style="justify-content:center;gap:10px;flex-wrap:nowrap"><span class="xg" id="xh"></span><span class="dash">–</span><span class="xg" id="xa"></span></div>
+      <div class="ba"><div class="t" id="an"></div><div class="form" id="af"></div></div>
+    </div>
+    <div class="sub" style="text-align:center;margin-top:-6px">Goles esperados según el modelo (promedio, no es un marcador)</div>
+    <div class="inj" id="inj"></div>
+    <div class="adj">
+      <span class="lbl">Ajuste manual por bajas clave (opinión tuya, no validado)</span>
+      <div class="row">
+        <label class="sub">Local<select id="adjH"><option value="0">Sin ajuste</option><option value="1">1 baja clave (−7% ataque)</option><option value="2">2 bajas clave (−14%)</option><option value="3">3 bajas clave (−21%)</option></select></label>
+        <label class="sub">Visitante<select id="adjA"><option value="0">Sin ajuste</option><option value="1">1 baja clave (−7% ataque)</option><option value="2">2 bajas clave (−14%)</option><option value="3">3 bajas clave (−21%)</option></select></label>
+      </div>
+    </div>
+    <div>
+      <div class="lbl" style="margin-bottom:6px">Resultado (1X2)</div>
+      <div class="stack" id="stack"></div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </section>
+
+  <section class="card" aria-label="Mercados y cuotas">
+    <h2>Mercados y cuotas</h2>
+    <div class="sub" id="oddsSrc"></div>
+    <div class="sub">Escribe la cuota de tu casa de apuestas. Verás la ganancia esperada (EV) por cada L 1 apostado, según el modelo.</div>
+    <div class="tbl"><table><thead><tr><th>Mercado</th><th>Prob.</th><th>Cuota justa</th><th>Tu cuota</th><th>EV</th><th></th></tr></thead><tbody id="mk"></tbody></table></div>
+    <div class="note"><b>Cómo leerlo.</b> En las pruebas históricas el modelo no superó a las casas de apuestas. Subestima a los favoritos fuertes y a los equipos que dominan córners y tiros. Si el modelo y la cuota difieren por 8 puntos o más, lo normal es que el error sea del modelo. Un EV positivo no es una señal de compra.</div>
+  </section>
+
+  <section class="card" aria-label="Bitácora">
+    <h2>Bitácora de apuestas</h2>
+    <div class="stats" id="stats"></div>
+    <div class="log" id="log"></div>
+    <div class="row">
+      <button class="btn ghost" id="copy" type="button">Copiar bitácora</button>
+      <span class="foot" id="copyMsg"></span>
+    </div>
+    <div class="foot">La bitácora se guarda solo en este navegador. Si borras los datos del sitio, se pierde; copia el texto de vez en cuando.</div>
+  </section>
+
+  <div class="foot">Scout Picks usa solo estadísticas de equipos (goles, córners, tiros) de las últimas temporadas. No considera alineaciones, lesiones ni árbitro. Apuesta solo lo que puedas perder y no intentes recuperar pérdidas.</div>
+</div>
+
+<script>
+const DATA = {"leagues":{"bundesliga":{"updated":"2026-09-20","n":1260,"models":{"goles":{"mu":0.3018189305479688,"home":0.2175174519704967,"ah":0.0001,"aa":0.0001,"at":0.0001,"att":{"Augsburg":-0.0661,"Bayern Munich":0.7112,"Bochum":-0.2317,"Darmstadt":-0.2353,"Dortmund":0.3066,"Ein Frankfurt":0.1713,"Elversberg":0.1913,"FC Koln":-0.0923,"Freiburg":0.0521,"Hamburg":-0.2271,"Heidenheim":-0.1592,"Hertha":-0.0519,"Hoffenheim":0.1391,"Holstein Kiel":-0.0135,"Leverkusen":0.3066,"M'gladbach":-0.0368,"Mainz":-0.002,"Paderborn":-0.1958,"RB Leipzig":0.2084,"Schalke 04":-0.2237,"St Pauli":-0.461,"Stuttgart":0.2594,"Union Berlin":-0.1919,"Werder Bremen":-0.0974,"Wolfsburg":-0.0612},"de":{"Augsburg":-0.014,"Bayern Munich":0.3366,"Bochum":-0.1609,"Darmstadt":-0.2509,"Dortmund":0.3148,"Ein Frankfurt":-0.069,"Elversberg":0.0387,"FC Koln":-0.1219,"Freiburg":0.0439,"Hamburg":-0.086,"Heidenheim":-0.1449,"Hertha":-0.0884,"Hoffenheim":-0.0913,"Holstein Kiel":-0.2531,"Leverkusen":0.2187,"M'gladbach":-0.1002,"Mainz":0.0954,"Paderborn":0.1299,"RB Leipzig":0.1554,"Schalke 04":0.1182,"St Pauli":0.0489,"Stuttgart":0.0852,"Union Berlin":-0.0813,"Werder Bremen":-0.0423,"Wolfsburg":-0.0808}},"corners":{"mu":1.4548554479207294,"home":0.2550571531554474,"ah":0.07234391680773795,"aa":0.06421473149818947,"at":0.008356143077240011,"att":{"Augsburg":-0.0181,"Bayern Munich":0.2471,"Bochum":-0.0056,"Darmstadt":-0.0739,"Dortmund":0.0677,"Ein Frankfurt":0.001,"Elversberg":-0.0278,"FC Koln":0.0513,"Freiburg":-0.1246,"Hamburg":-0.1425,"Heidenheim":-0.0407,"Hertha":-0.0132,"Hoffenheim":0.0856,"Holstein Kiel":-0.1049,"Leverkusen":0.1859,"M'gladbach":-0.0693,"Mainz":0.0362,"Paderborn":-0.025,"RB Leipzig":0.0713,"Schalke 04":-0.0528,"St Pauli":-0.0236,"Stuttgart":0.1041,"Union Berlin":-0.0304,"Werder Bremen":-0.0805,"Wolfsburg":-0.0173},"de":{"Augsburg":-0.0722,"Bayern Munich":0.2993,"Bochum":-0.0556,"Darmstadt":-0.0161,"Dortmund":0.1097,"Ein Frankfurt":0.0428,"Elversberg":-0.0766,"FC Koln":-0.0678,"Freiburg":0.0956,"Hamburg":-0.0885,"Heidenheim":0.003,"Hertha":-0.0287,"Hoffenheim":-0.0185,"Holstein Kiel":-0.1193,"Leverkusen":0.199,"M'gladbach":-0.0237,"Mainz":0.0539,"Paderborn":-0.0663,"RB Leipzig":0.0432,"Schalke 04":-0.1004,"St Pauli":0.0062,"Stuttgart":0.08,"Union Berlin":-0.0007,"Werder Bremen":-0.0149,"Wolfsburg":-0.1831}},"sot":{"mu":1.4186456177711926,"home":0.2515947509580424,"ah":0.02237775429766924,"aa":0.0254840601193376,"at":0.0007774806926889166,"att":{"Augsburg":-0.0308,"Bayern Munich":0.4338,"Bochum":-0.0353,"Darmstadt":-0.0655,"Dortmund":0.0537,"Ein Frankfurt":0.0138,"Elversberg":-0.0053,"FC Koln":0.0026,"Freiburg":-0.0393,"Hamburg":-0.0268,"Heidenheim":-0.1472,"Hertha":-0.0221,"Hoffenheim":0.0436,"Holstein Kiel":-0.0449,"Leverkusen":0.1371,"M'gladbach":-0.0294,"Mainz":-0.0222,"Paderborn":-0.101,"RB Leipzig":0.1451,"Schalke 04":-0.021,"St Pauli":-0.2022,"Stuttgart":0.1717,"Union Berlin":-0.107,"Werder Bremen":-0.0481,"Wolfsburg":-0.0551},"de":{"Augsburg":-0.0663,"Bayern Munich":0.2736,"Bochum":-0.0252,"Darmstadt":-0.071,"Dortmund":0.1449,"Ein Frankfurt":-0.0295,"Elversberg":0.0445,"FC Koln":0.0039,"Freiburg":0.0563,"Hamburg":-0.051,"Heidenheim":-0.0791,"Hertha":-0.0132,"Hoffenheim":-0.0146,"Holstein Kiel":-0.0839,"Leverkusen":0.0633,"M'gladbach":-0.1654,"Mainz":0.0167,"Paderborn":0.0011,"RB Leipzig":0.0895,"Schalke 04":-0.0768,"St Pauli":-0.0204,"Stuttgart":0.0496,"Union Berlin":0.0085,"Werder Bremen":-0.0178,"Wolfsburg":-0.0361}},"shots":{"mu":2.4810762066414163,"home":0.21212122002366104,"ah":0.03591437636626179,"aa":0.04691898783738255,"at":0.010230239938205009,"att":{"Augsburg":-0.014,"Bayern Munich":0.3363,"Bochum":0.0157,"Darmstadt":-0.0447,"Dortmund":0.0488,"Ein Frankfurt":-0.03,"Elversberg":-0.0679,"FC Koln":0.0426,"Freiburg":-0.0344,"Hamburg":-0.0662,"Heidenheim":-0.0922,"Hertha":-0.0477,"Hoffenheim":0.0746,"Holstein Kiel":-0.1056,"Leverkusen":0.1748,"M'gladbach":-0.0424,"Mainz":-0.0062,"Paderborn":-0.0298,"RB Leipzig":0.1238,"Schalke 04":-0.0482,"St Pauli":-0.1808,"Stuttgart":0.1199,"Union Berlin":-0.0556,"Werder Bremen":-0.0217,"Wolfsburg":-0.0509},"de":{"Augsburg":-0.0848,"Bayern Munich":0.3057,"Bochum":-0.0342,"Darmstadt":-0.0864,"Dortmund":0.1713,"Ein Frankfurt":0.0315,"Elversberg":-0.1879,"FC Koln":-0.0005,"Freiburg":0.0202,"Hamburg":-0.0758,"Heidenheim":-0.0521,"Hertha":-0.0034,"Hoffenheim":0.0105,"Holstein Kiel":-0.1074,"Leverkusen":0.1662,"M'gladbach":-0.1136,"Mainz":0.017,"Paderborn":-0.1382,"RB Leipzig":0.0653,"Schalke 04":-0.0797,"St Pauli":0.1091,"Stuttgart":0.0868,"Union Berlin":0.0376,"Werder Bremen":-0.0137,"Wolfsburg":-0.0416}}},"teams":["Augsburg","Bayern Munich","Dortmund","Ein Frankfurt","Elversberg","FC Koln","Freiburg","Hamburg","Hoffenheim","Leverkusen","M'gladbach","Mainz","Paderborn","RB Leipzig","Schalke 04","Stuttgart","Union Berlin","Werder Bremen"],"form":{"Augsburg":"PGGEP","Bayern Munich":"GGEGG","Dortmund":"GGGGG","Ein Frankfurt":"EEPGE","Elversberg":"GGPE","FC Koln":"PGPEP","Freiburg":"GGGGE","Hamburg":"EPPPG","Hoffenheim":"PPPGP","Leverkusen":"EPGEG","M'gladbach":"GPPPP","Mainz":"GEGPG","Paderborn":"EPPG","RB Leipzig":"PGPGP","Schalke 04":"PPEGE","Stuttgart":"EPGPP","Union Berlin":"GEPPP","Werder Bremen":"PPGEG"},"inj":null,"name":"Bundesliga"},"premier":{"updated":"2026-09-20","n":1570,"models":{"goles":{"mu":0.2356801467075381,"home":0.17422838235864943,"ah":0.0001,"aa":0.0001,"at":0.0001,"att":{"Arsenal":0.3117,"Aston Villa":0.1091,"Bournemouth":0.0768,"Brentford":0.1429,"Brighton":0.2056,"Burnley":-0.2024,"Chelsea":0.1822,"Coventry":-0.3406,"Crystal Palace":-0.0755,"Everton":-0.1285,"Fulham":-0.0356,"Hull":-0.0456,"Ipswich":-0.139,"Leeds":-0.0066,"Leicester":-0.2393,"Liverpool":0.298,"Luton":0.0162,"Man City":0.4195,"Man United":0.1625,"Newcastle":0.2075,"Nott'm Forest":-0.0275,"Sheffield United":-0.1554,"Southampton":-0.3574,"Sunderland":-0.1094,"Tottenham":0.0214,"West Ham":-0.0423,"Wolves":-0.2491},"de":{"Arsenal":0.5054,"Aston Villa":0.0631,"Bournemouth":0.0527,"Brentford":0.0761,"Brighton":0.0922,"Burnley":-0.2355,"Chelsea":0.0211,"Coventry":-0.0821,"Crystal Palace":0.0177,"Everton":0.1742,"Fulham":0.0551,"Hull":0.2372,"Ipswich":-0.3194,"Leeds":0.0786,"Leicester":-0.2365,"Liverpool":0.1547,"Luton":-0.2554,"Man City":0.3441,"Man United":0.0693,"Newcastle":0.0269,"Nott'm Forest":0.0949,"Sheffield United":-0.3915,"Southampton":-0.3051,"Sunderland":0.065,"Tottenham":-0.0753,"West Ham":-0.0998,"Wolves":-0.1272}},"corners":{"mu":1.518588187721427,"home":0.16081567854837528,"ah":0.07710472167126331,"aa":0.11745922215408648,"at":0.008177112421159125,"att":{"Arsenal":0.1416,"Aston Villa":0.0576,"Bournemouth":0.0895,"Brentford":-0.0337,"Brighton":0.0306,"Burnley":-0.1361,"Chelsea":0.1657,"Coventry":-0.0222,"Crystal Palace":-0.1073,"Everton":-0.0801,"Fulham":0.0492,"Hull":-0.0598,"Ipswich":-0.1263,"Leeds":-0.0574,"Leicester":-0.12,"Liverpool":0.1878,"Luton":0.0234,"Man City":0.2333,"Man United":0.0656,"Newcastle":0.1217,"Nott'm Forest":-0.0594,"Sheffield United":-0.0595,"Southampton":-0.0929,"Sunderland":-0.142,"Tottenham":0.1455,"West Ham":-0.0437,"Wolves":-0.1716},"de":{"Arsenal":0.2989,"Aston Villa":0.0503,"Bournemouth":-0.024,"Brentford":-0.0792,"Brighton":0.0663,"Burnley":-0.1064,"Chelsea":0.1118,"Coventry":0.0371,"Crystal Palace":-0.0161,"Everton":-0.0502,"Fulham":-0.0095,"Hull":-0.0237,"Ipswich":-0.1078,"Leeds":-0.0135,"Leicester":-0.0791,"Liverpool":0.16,"Luton":-0.0447,"Man City":0.2334,"Man United":-0.0011,"Newcastle":0.004,"Nott'm Forest":-0.0427,"Sheffield United":-0.1002,"Southampton":-0.104,"Sunderland":0.0125,"Tottenham":0.0074,"West Ham":-0.0916,"Wolves":-0.0875}},"sot":{"mu":1.3950377558494964,"home":0.15043449451688345,"ah":0.03499500656566968,"aa":0.028110766886033818,"at":0.004970653840510711,"att":{"Arsenal":0.1156,"Aston Villa":0.0152,"Bournemouth":0.0865,"Brentford":-0.0045,"Brighton":0.123,"Burnley":-0.1421,"Chelsea":0.0981,"Coventry":-0.0288,"Crystal Palace":-0.0374,"Everton":-0.0529,"Fulham":-0.0367,"Hull":-0.0211,"Ipswich":-0.0589,"Leeds":-0.0554,"Leicester":-0.1259,"Liverpool":0.1685,"Luton":-0.0276,"Man City":0.218,"Man United":0.1689,"Newcastle":0.0695,"Nott'm Forest":-0.046,"Sheffield United":-0.046,"Southampton":-0.1294,"Sunderland":-0.0841,"Tottenham":0.0179,"West Ham":-0.0744,"Wolves":-0.1107},"de":{"Arsenal":0.331,"Aston Villa":-0.0035,"Bournemouth":0.0109,"Brentford":-0.0436,"Brighton":0.0888,"Burnley":-0.1752,"Chelsea":0.0028,"Coventry":0.0197,"Crystal Palace":0.0227,"Everton":0.0242,"Fulham":0.0315,"Hull":0.0246,"Ipswich":-0.1172,"Leeds":0.0137,"Leicester":-0.0911,"Liverpool":0.0792,"Luton":-0.0899,"Man City":0.1956,"Man United":0.0604,"Newcastle":-0.0219,"Nott'm Forest":0.0326,"Sheffield United":-0.1393,"Southampton":-0.1655,"Sunderland":0.0487,"Tottenham":0.0138,"West Ham":-0.1054,"Wolves":-0.047}},"shots":{"mu":2.454113585829875,"home":0.1892312019454428,"ah":0.045576795600450436,"aa":0.05992370056833157,"at":0.01111286799412093,"att":{"Arsenal":0.1409,"Aston Villa":0.0072,"Bournemouth":0.1008,"Brentford":-0.0552,"Brighton":0.1206,"Burnley":-0.1698,"Chelsea":0.1146,"Coventry":-0.028,"Crystal Palace":-0.0326,"Everton":-0.0557,"Fulham":0.0493,"Hull":0.0011,"Ipswich":-0.1143,"Leeds":0.0021,"Leicester":-0.1951,"Liverpool":0.2499,"Luton":-0.0455,"Man City":0.2089,"Man United":0.2141,"Newcastle":0.0545,"Nott'm Forest":0.006,"Sheffield United":-0.103,"Southampton":-0.1866,"Sunderland":-0.0811,"Tottenham":0.0121,"West Ham":-0.0701,"Wolves":-0.1454},"de":{"Arsenal":0.3457,"Aston Villa":0.0355,"Bournemouth":0.0315,"Brentford":-0.0706,"Brighton":0.1242,"Burnley":-0.1819,"Chelsea":0.1179,"Coventry":-0.0943,"Crystal Palace":0.0603,"Everton":-0.028,"Fulham":0.0573,"Hull":0.0112,"Ipswich":-0.1508,"Leeds":0.0131,"Leicester":-0.1583,"Liverpool":0.1519,"Luton":-0.1394,"Man City":0.2828,"Man United":0.0698,"Newcastle":0.0048,"Nott'm Forest":-0.0013,"Sheffield United":-0.1545,"Southampton":-0.19,"Sunderland":-0.0201,"Tottenham":0.0128,"West Ham":-0.109,"Wolves":-0.0203}}},"teams":["Arsenal","Aston Villa","Bournemouth","Brentford","Brighton","Chelsea","Coventry","Crystal Palace","Everton","Fulham","Hull","Ipswich","Leeds","Liverpool","Man City","Man United","Newcastle","Nott'm Forest","Sunderland","Tottenham"],"form":{"Arsenal":"GGGGP","Aston Villa":"PPEPG","Bournemouth":"PEEEP","Brentford":"GEEEG","Brighton":"GPEGG","Chelsea":"GGPEP","Coventry":"PPPPG","Crystal Palace":"PPGPE","Everton":"GEEEG","Fulham":"PPPEE","Hull":"GGEEP","Ipswich":"GPPGP","Leeds":"GEEGE","Liverpool":"EEGEG","Man City":"GGGGG","Man United":"PGEPE","Newcastle":"EGEPG","Nott'm Forest":"PEEGP","Sunderland":"PGEPP","Tottenham":"PPEEP"},"inj":null,"name":"Premier League"},"laliga":{"updated":"2026-09-20","n":1589,"models":{"goles":{"mu":0.10939263712937627,"home":0.29173045116770574,"ah":0.0001,"aa":0.0001,"at":0.0001,"att":{"Alaves":-0.0635,"Almeria":-0.0049,"Ath Bilbao":0.0082,"Ath Madrid":0.3285,"Barcelona":0.7024,"Betis":0.1536,"Cadiz":-0.2649,"Celta":0.0802,"Elche":0.0565,"Espanol":-0.058,"Getafe":-0.3425,"Girona":0.0127,"Granada":-0.1015,"La Coruna":0.045,"Las Palmas":-0.1724,"Leganes":-0.099,"Levante":0.0389,"Malaga":-0.3393,"Mallorca":-0.1067,"Osasuna":-0.067,"Oviedo":-0.3877,"Real Madrid":0.4884,"Santander":0.1525,"Sevilla":-0.0135,"Sociedad":0.0849,"Valencia":-0.0915,"Valladolid":-0.3077,"Vallecano":-0.097,"Villarreal":0.3648},"de":{"Alaves":0.0661,"Almeria":-0.1776,"Ath Bilbao":0.1576,"Ath Madrid":0.2415,"Barcelona":0.2888,"Betis":0.1272,"Cadiz":0.0025,"Celta":0.0629,"Elche":-0.139,"Espanol":-0.0154,"Getafe":0.2556,"Girona":-0.0014,"Granada":-0.2238,"La Coruna":0.0519,"Las Palmas":-0.0395,"Leganes":-0.0264,"Levante":-0.1134,"Malaga":-0.0452,"Mallorca":0.0594,"Osasuna":-0.0048,"Oviedo":-0.069,"Real Madrid":0.3221,"Santander":-0.4642,"Sevilla":-0.0269,"Sociedad":-0.0191,"Valencia":0.0019,"Valladolid":-0.369,"Vallecano":0.0768,"Villarreal":0.0211}},"corners":{"mu":1.4300602154547641,"home":0.2538971973988867,"ah":0.09717940835027755,"aa":0.06386617161419933,"at":0.012371378657120494,"att":{"Alaves":0.03,"Almeria":-0.0359,"Ath Bilbao":0.1542,"Ath Madrid":0.1418,"Barcelona":0.3056,"Betis":0.0245,"Cadiz":-0.0223,"Celta":-0.1363,"Elche":-0.0773,"Espanol":-0.087,"Getafe":-0.124,"Girona":-0.056,"Granada":-0.039,"La Coruna":0.0096,"Las Palmas":-0.0483,"Leganes":-0.1473,"Levante":-0.0636,"Malaga":0.0529,"Mallorca":-0.1292,"Osasuna":-0.1083,"Oviedo":-0.086,"Real Madrid":0.2337,"Santander":-0.016,"Sevilla":-0.0232,"Sociedad":0.1499,"Valencia":0.0129,"Valladolid":-0.0431,"Vallecano":0.1035,"Villarreal":0.024},"de":{"Alaves":-0.0001,"Almeria":-0.0659,"Ath Bilbao":0.1367,"Ath Madrid":0.112,"Barcelona":0.1547,"Betis":-0.0403,"Cadiz":0.0161,"Celta":0.0586,"Elche":0.0587,"Espanol":-0.0292,"Getafe":0.0529,"Girona":0.0115,"Granada":-0.023,"La Coruna":-0.0386,"Las Palmas":-0.0392,"Leganes":-0.1225,"Levante":-0.1009,"Malaga":-0.0181,"Mallorca":-0.141,"Osasuna":0.0125,"Oviedo":-0.0618,"Real Madrid":0.1588,"Santander":-0.2343,"Sevilla":0.0847,"Sociedad":0.0779,"Valencia":0.0306,"Valladolid":-0.0209,"Vallecano":-0.0476,"Villarreal":0.0174}},"sot":{"mu":1.3029715065299154,"home":0.2754551760418306,"ah":0.007091548406771247,"aa":0.03563071940585723,"at":0.005972131659332256,"att":{"Alaves":-0.0339,"Almeria":0.0157,"Ath Bilbao":0.0416,"Ath Madrid":0.1708,"Barcelona":0.3715,"Betis":0.1381,"Cadiz":-0.0669,"Celta":0.0032,"Elche":-0.0168,"Espanol":-0.0671,"Getafe":-0.2034,"Girona":0.0191,"Granada":-0.0422,"La Coruna":-0.0279,"Las Palmas":-0.0705,"Leganes":-0.088,"Levante":-0.0274,"Malaga":-0.131,"Mallorca":-0.0799,"Osasuna":-0.0612,"Oviedo":-0.1373,"Real Madrid":0.3745,"Santander":0.0016,"Sevilla":-0.0447,"Sociedad":0.0343,"Valencia":-0.161,"Valladolid":-0.1093,"Vallecano":0.0837,"Villarreal":0.1146},"de":{"Alaves":0.0737,"Almeria":-0.0707,"Ath Bilbao":0.1169,"Ath Madrid":0.1389,"Barcelona":0.189,"Betis":-0.0171,"Cadiz":-0.0305,"Celta":0.0496,"Elche":-0.0529,"Espanol":-0.1036,"Getafe":0.0632,"Girona":-0.0205,"Granada":-0.0542,"La Coruna":-0.0258,"Las Palmas":-0.0156,"Leganes":-0.0239,"Levante":-0.0993,"Malaga":-0.0621,"Mallorca":0.0143,"Osasuna":-0.0029,"Oviedo":-0.1129,"Real Madrid":0.1551,"Santander":-0.159,"Sevilla":0.0483,"Sociedad":0.0045,"Valencia":0.0462,"Valladolid":-0.101,"Vallecano":0.0212,"Villarreal":0.0307}},"shots":{"mu":2.380623857751924,"home":0.23888407889033664,"ah":0.03861079059715424,"aa":0.056927610967746,"at":0.008821100023600531,"att":{"Alaves":-0.0044,"Almeria":0.0253,"Ath Bilbao":0.1045,"Ath Madrid":0.1067,"Barcelona":0.3628,"Betis":0.1556,"Cadiz":-0.057,"Celta":-0.0847,"Elche":-0.065,"Espanol":-0.0077,"Getafe":-0.1314,"Girona":-0.0366,"Granada":-0.048,"La Coruna":-0.0869,"Las Palmas":-0.0777,"Leganes":-0.1361,"Levante":0.0471,"Malaga":-0.0821,"Mallorca":-0.098,"Osasuna":-0.042,"Oviedo":-0.1199,"Real Madrid":0.3246,"Santander":-0.054,"Sevilla":-0.0037,"Sociedad":0.0006,"Valencia":-0.0536,"Valladolid":-0.1453,"Vallecano":0.1322,"Villarreal":0.075},"de":{"Alaves":0.0562,"Almeria":-0.1061,"Ath Bilbao":0.2445,"Ath Madrid":0.1134,"Barcelona":0.3053,"Betis":0.0193,"Cadiz":-0.0352,"Celta":0.0514,"Elche":-0.0752,"Espanol":-0.0696,"Getafe":0.1012,"Girona":-0.0484,"Granada":-0.0042,"La Coruna":-0.04,"Las Palmas":-0.0208,"Leganes":-0.1103,"Levante":-0.1262,"Malaga":-0.0714,"Mallorca":-0.0845,"Osasuna":0.0289,"Oviedo":-0.1049,"Real Madrid":0.1147,"Santander":-0.1351,"Sevilla":0.1226,"Sociedad":-0.0158,"Valencia":0.062,"Valladolid":-0.1525,"Vallecano":0.0077,"Villarreal":-0.0273}}},"teams":["Alaves","Ath Bilbao","Ath Madrid","Barcelona","Betis","Celta","Elche","Espanol","Getafe","La Coruna","Levante","Malaga","Osasuna","Real Madrid","Santander","Sevilla","Sociedad","Valencia","Vallecano","Villarreal"],"form":{"Alaves":"GGPPE","Ath Bilbao":"PGGEE","Ath Madrid":"GPGGG","Barcelona":"GGGGG","Betis":"PGGGE","Celta":"PEEEG","Elche":"PPEPG","Espanol":"PEGPP","Getafe":"PEEPG","La Coruna":"GGEPE","Levante":"EGEPP","Malaga":"PEEPP","Osasuna":"GPPPE","Real Madrid":"GPGGP","Santander":"GPGPP","Sevilla":"PEGGP","Sociedad":"GEGPG","Valencia":"PPPGP","Vallecano":"PGPGE","Villarreal":"PPPGG"},"inj":null,"name":"La Liga"}},"fixtures":[],"note":"La API no respondió (revisa la clave o el plan). La página usa solo el modelo y tus cuotas.","generated":"2026-10-10 18:21 (hora de Honduras)"};
+const $ = id => document.getElementById(id);
+const pct = x => (x*100).toFixed(0)+"%";
+const f2 = x => x.toFixed(2);
+let league = "bundesliga";
+const KEY = "scoutpicks.log.v1";
+
+/* ---------- matemática del modelo ---------- */
+function pois(l, n){const a=[Math.exp(-l)];for(let k=1;k<=n;k++)a.push(a[k-1]*l/k);return a;}
+function scoreMatrix(lh, la){
+  const N=10, ph=pois(lh,N), pa=pois(la,N); let s=0; const m=[];
+  for(let i=0;i<=N;i++){m.push([]);for(let j=0;j<=N;j++){const v=ph[i]*pa[j];m[i].push(v);s+=v;}}
+  return m.map(r=>r.map(v=>v/s));
+}
+function lam(M, h, a){
+  return [Math.exp(M.mu+M.home+M.att[h]-M.de[a]), Math.exp(M.mu+M.att[a]-M.de[h])];
+}
+function pOver(line, mu, alpha){            // binomial negativa: P(X > floor(line))
+  const r=1/Math.max(alpha,1e-4), p=r/(r+mu), K=Math.floor(line);
+  let pm=Math.pow(p,r), cdf=pm;
+  for(let k=0;k<K;k++){pm=pm*(k+r)/(k+1)*(1-p);cdf+=pm;}
+  return Math.max(0,Math.min(1,1-cdf));
+}
+const LINES = {
+  corners:{n:"Córners",tot:[8.5,9.5,10.5,11.5],team:[3.5,4.5,5.5]},
+  sot:{n:"Tiros a puerta",tot:[7.5,8.5,9.5,10.5],team:[3.5,4.5,5.5]},
+  shots:{n:"Tiros totales",tot:[24.5,26.5,28.5,30.5],team:[11.5,13.5,15.5]}
+};
+
+/* ---------- cálculo de un partido ---------- */
+function compute(h, a, fh, fa){
+  const L = DATA.leagues[league], out = {rows:[], chips:[]};
+  const g = L.models.goles, l0 = lam(g,h,a), lh = l0[0]*fh, la = l0[1]*fa, m = scoreMatrix(lh,la);
+  let pH=0,pD=0,pA=0,o15=0,o25=0,o35=0,bt=0;
+  for(let i=0;i<m.length;i++)for(let j=0;j<m.length;j++){
+    const v=m[i][j]; if(i>j)pH+=v; else if(i===j)pD+=v; else pA+=v;
+    if(i+j>=2)o15+=v; if(i+j>=3)o25+=v; if(i+j>=4)o35+=v; if(i>=1&&j>=1)bt+=v;
+  }
+  out.lh=lh; out.la=la; out.p=[pH,pD,pA]; out.o25=o25; out.bt=bt;
+  const R=(sec,label,p,key,fav)=>out.rows.push({sec,label,p,key,fav});
+  R("Resultado",h+" gana",pH,"1",true); R("Resultado","Empate",pD,"X"); R("Resultado",a+" gana",pA,"2",true);
+  R("Resultado","Doble oportunidad "+h+" o empate",pH+pD); R("Resultado","Doble oportunidad "+a+" o empate",pA+pD);
+  R("Goles","Más de 1.5 goles",o15,"o:goals:1.5"); R("Goles","Menos de 1.5 goles",1-o15,"u:goals:1.5");
+  R("Goles","Más de 2.5 goles",o25,"o:goals:2.5"); R("Goles","Menos de 2.5 goles",1-o25,"u:goals:2.5");
+  R("Goles","Más de 3.5 goles",o35,"o:goals:3.5"); R("Goles","Menos de 3.5 goles",1-o35,"u:goals:3.5");
+  R("Goles","Ambos anotan: sí",bt,"btts:y"); R("Goles","Ambos anotan: no",1-bt,"btts:n");
+  for(const [k,c] of Object.entries(LINES)){
+    const M=L.models[k]; if(!M) continue;
+    const e0=lam(M,h,a), ch=e0[0]*fh, ca=e0[1]*fa, tot=ch+ca;
+    out.chips.push([c.n, ch.toFixed(1)+" – "+ca.toFixed(1)]);
+    for(const x of c.tot){const p=pOver(x,tot,M.at);
+      R(c.n+" · total","Más de "+x,p,k==="corners"?"o:corners:"+x:null);
+      R(c.n+" · total","Menos de "+x,1-p,k==="corners"?"u:corners:"+x:null);}
+    for(const x of c.team){R(c.n+" · "+h,"Más de "+x,pOver(x,ch,M.ah));R(c.n+" · "+a,"Más de "+x,pOver(x,ca,M.aa));}
+  }
+  return out;
+}
+
+/* ---------- interfaz ---------- */
+let cur = null;
+function fillTeams(){
+  const L=DATA.leagues[league];
+  for(const id of ["home","away"]){
+    $(id).innerHTML=L.teams.map(t=>`<option>${t}</option>`).join("");
+  }
+  const first=(DATA.fixtures||[]).find(f=>f.lg===league);
+  const pref=first?[first.h,first.a]:[L.teams[0],L.teams[1]];
+  $("home").value=pref[0]; $("away").value=pref[1];
+}
+function formHtml(t){return (DATA.leagues[league].form[t]||"").split("").map(c=>`<i class="${c}">${c}</i>`).join("");}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function injHtml(h,a){
+  const L=DATA.leagues[league];
+  if(!L.inj) return `<div class="none">Lesionados: sin datos (la API no respondió o no hay clave).</div>`;
+  const one=t=>{const l=L.inj[t]||[];
+    return l.length?`<div><b>${esc(t)}</b>: ${l.map(x=>esc(x[0])+(x[1]?" ("+esc(x[1])+")":"")).join(", ")}</div>`
+                   :`<div class="none"><b>${esc(t)}</b>: sin bajas reportadas</div>`;};
+  return one(h)+one(a);
+}
+function render(){
+  const h=$("home").value,a=$("away").value,L=DATA.leagues[league];
+  $("upd").textContent=`${L.name} · datos hasta ${L.updated} · actualizado ${DATA.generated||"—"}`;
+  if(h===a){$("mk").innerHTML=`<tr><td colspan="6" class="empty">Elige dos equipos distintos.</td></tr>`;return;}
+  const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
+  cur=compute(h,a,fh,fa);
+  $("hn").textContent=h; $("an").textContent=a;
+  $("hf").innerHTML=formHtml(h); $("af").innerHTML=formHtml(a);
+  $("inj").innerHTML=injHtml(h,a);
+  $("xh").textContent=cur.lh.toFixed(2); $("xa").textContent=cur.la.toFixed(2);
+  const [pH,pD,pA]=cur.p;
+  $("stack").innerHTML=`<div class="h" style="flex:${pH}">${pct(pH)}</div><div style="flex:${pD}">${pct(pD)}</div><div class="a" style="flex:${pA}">${pct(pA)}</div>`;
+  $("chips").innerHTML=[["Más de 2.5 goles",pct(cur.o25)],["Ambos anotan",pct(cur.bt)],...cur.chips.map(c=>[c[0]+" esperados",c[1]])]
+    .map(c=>`<div class="chip">${c[0]}<b>${c[1]}</b></div>`).join("");
+  let html="",sec="";
+  cur.rows.forEach((r,i)=>{
+    if(r.sec!==sec){sec=r.sec;html+=`<tr class="sec"><td colspan="6">${esc(sec)}</td></tr>`;}
+    html+=`<tr data-i="${i}"><td>${esc(r.label)}</td><td>${pct(r.p)}</td><td>${f2(1/r.p)}</td>
+      <td><input inputmode="decimal" id="o${i}" data-i="${i}" placeholder="—" aria-label="Cuota ${esc(r.label)}"></td>
+      <td class="ev" id="e${i}"></td><td><button class="mini" id="b${i}" data-i="${i}" disabled type="button">Anotar</button></td></tr>`;
+  });
+  $("mk").innerHTML=html;
+  const fx=(DATA.fixtures||[]).find(f=>f.lg===league&&f.h===h&&f.a===a);
+  let n=0;
+  if(fx&&fx.odds){
+    cur.rows.forEach((r,i)=>{const v=r.key&&fx.odds[r.key]; if(v){$("o"+i).value=v;onOdds(i);n++;}});
+  }
+  $("oddsSrc").textContent=n?`Cuotas cargadas automáticamente (${n}): promedio de varias casas según la API. Puedes cambiarlas por las de tu casa.`:"";
+}
+function onOdds(i){
+  const r=cur.rows[i], v=parseFloat($("o"+i).value.replace(",","."));
+  const e=$("e"+i), b=$("b"+i);
+  if(!(v>1)){e.innerHTML="";b.disabled=true;return;}
+  const ev=r.p*v-1, gap=r.p-1/v;
+  let flag="";
+  if(ev>0 && gap>=0.08) flag=`<span class="flag">Diferencia grande con la casa: probable error del modelo</span>`;
+  else if(r.fav && r.p<0.5 && ev>0) flag=`<span class="flag">Ojo: el modelo subestima favoritos</span>`;
+  e.className="ev "+(ev>0?"pos":"neg");
+  e.innerHTML=(ev>0?"+":"")+(ev*100).toFixed(1)+"%"+flag;
+  b.disabled=false;
+}
+function fxList(){
+  const fx=DATA.fixtures||[];
+  $("fxNote").textContent=DATA.note||"";
+  $("fxList").innerHTML=fx.map((f,i)=>`<button class="fx" type="button" data-f="${i}"><span class="tm">${esc(f.date.slice(5,10))}<br>${esc(f.date.slice(11,16))}</span><span><b>${esc(f.h)}</b> vs <b>${esc(f.a)}</b></span><span class="lg">${esc(DATA.leagues[f.lg].name)}</span></button>`).join("");
+}
+$("fxList").addEventListener("click",ev=>{
+  const b=ev.target.closest("button[data-f]"); if(!b)return;
+  const f=DATA.fixtures[+b.dataset.f];
+  league=f.lg; tabs(); fillTeams(); $("home").value=f.h; $("away").value=f.a;
+  $("adjH").value="0"; $("adjA").value="0"; render();
+  $("home").scrollIntoView({behavior:"smooth",block:"center"});
+});
+
+/* ---------- bitácora ---------- */
+function readLog(){try{return JSON.parse(localStorage.getItem(KEY)||"[]");}catch(e){return memLog;}}
+let memLog=[];
+function writeLog(a){memLog=a;try{localStorage.setItem(KEY,JSON.stringify(a));}catch(e){}}
+function addPick(i){
+  const r=cur.rows[i], odds=parseFloat($("o"+i).value.replace(",","."));
+  const log=readLog();
+  log.unshift({id:Date.now(),d:new Date().toISOString().slice(0,10),lg:DATA.leagues[league].name,
+    match:$("home").value+" vs "+$("away").value,mk:r.sec+": "+r.label,odds,p:r.p,stake:1,st:"pending"});
+  writeLog(log); renderLog();
+}
+function renderLog(){
+  const log=readLog();
+  let staked=0,profit=0,w=0,l=0,pSum=0,n=0;
+  for(const e of log){
+    if(e.st==="pending")continue;
+    staked+=e.stake; n++; pSum+=e.p;
+    if(e.st==="won"){profit+=e.stake*(e.odds-1);w++;} else {profit-=e.stake;l++;}
+  }
+  const roi=staked?profit/staked:0;
+  $("stats").innerHTML=
+    `<div class="stat"><span class="lbl">Resueltas</span><b>${n}</b></div>
+     <div class="stat"><span class="lbl">Ganadas</span><b>${w}/${n}</b></div>
+     <div class="stat"><span class="lbl">Prob. media del modelo</span><b>${n?pct(pSum/n):"—"}</b></div>
+     <div class="stat ${profit>0?"p":profit<0?"n":""}"><span class="lbl">Balance (L)</span><b>${profit>0?"+":""}${profit.toFixed(2)}</b></div>
+     <div class="stat ${roi>0?"p":roi<0?"n":""}"><span class="lbl">ROI</span><b>${n?(roi*100).toFixed(0)+"%":"—"}</b></div>`;
+  $("log").innerHTML=log.length?log.map(e=>`<div class="entry">
+    <div><div class="m">${e.match}</div><div class="d">${e.mk} · cuota ${f2(e.odds)} · modelo ${pct(e.p)} · ${e.lg} · ${e.d}</div></div>
+    <div class="act"><span class="pill ${e.st}">${e.st==="won"?"Ganada":e.st==="lost"?"Perdida":"Pendiente"}</span>
+      <input style="width:64px;padding:4px 6px;font-size:14px" aria-label="Monto en lempiras" title="Monto (L)" data-stake="${e.id}" value="${e.stake}">
+      <button class="mini" data-w="${e.id}" type="button">Ganó</button><button class="mini" data-l="${e.id}" type="button">Perdió</button><button class="mini" data-x="${e.id}" type="button">Borrar</button></div>
+  </div>`).join(""):`<div class="empty">Todavía no hay apuestas. Escribe una cuota arriba y toca Anotar para registrar la predicción y comparar después el modelo contra los resultados reales.</div>`;
+}
+$("log").addEventListener("click",ev=>{
+  const t=ev.target,log=readLog();
+  const upd=(id,fn)=>{const e=log.find(x=>String(x.id)===id);if(e)fn(e);writeLog(log);renderLog();};
+  if(t.dataset.w)upd(t.dataset.w,e=>e.st="won");
+  else if(t.dataset.l)upd(t.dataset.l,e=>e.st="lost");
+  else if(t.dataset.x){writeLog(log.filter(x=>String(x.id)!==t.dataset.x));renderLog();}
+});
+$("log").addEventListener("change",ev=>{
+  const id=ev.target.dataset.stake; if(!id)return;
+  const log=readLog(),e=log.find(x=>String(x.id)===id),v=parseFloat(String(ev.target.value).replace(",","."));
+  if(e&&v>0){e.stake=v;writeLog(log);}renderLog();
+});
+$("copy").addEventListener("click",()=>{
+  const txt=readLog().map(e=>`${e.d} | ${e.match} | ${e.mk} | cuota ${f2(e.odds)} | L${e.stake} | modelo ${pct(e.p)} | ${e.st}`).join("\n")||"(vacía)";
+  const done=m=>{$("copyMsg").textContent=m;};
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(txt).then(()=>done("Copiado."),()=>done("No se pudo copiar automáticamente."));
+  else done("No se pudo copiar automáticamente.");
+});
+
+$("adjH").addEventListener("change",render); $("adjA").addEventListener("change",render);
+$("mk").addEventListener("input",ev=>{if(ev.target.dataset.i!==undefined&&ev.target.tagName==="INPUT")onOdds(+ev.target.dataset.i);});
+$("mk").addEventListener("click",ev=>{if(ev.target.tagName==="BUTTON"&&!ev.target.disabled)addPick(+ev.target.dataset.i);});
+$("home").addEventListener("change",render); $("away").addEventListener("change",render);
+
+function tabs(){
+  $("leagueTabs").innerHTML=Object.entries(DATA.leagues).map(([k,L])=>
+    `<button class="tab" type="button" data-k="${k}" aria-pressed="${k===league}">${L.name}</button>`).join("");
+}
+$("leagueTabs").addEventListener("click",ev=>{
+  const k=ev.target.dataset.k; if(!k||k===league)return;
+  league=k; tabs(); fillTeams(); $("adjH").value="0"; $("adjA").value="0"; render();
+});
+league=(DATA.fixtures&&DATA.fixtures[0]&&DATA.fixtures[0].lg)||Object.keys(DATA.leagues)[0];
+tabs(); fillTeams(); fxList(); render(); renderLog();
+</script>
+
+</body></html>
