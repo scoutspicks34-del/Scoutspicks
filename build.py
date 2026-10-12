@@ -644,6 +644,7 @@ td input{width:76px;padding:5px 6px;font-size:15px;text-align:right}
     <div>
       <div class="lbl" style="margin-bottom:6px">Resultado (1X2)</div>
       <div class="stack" id="stack"></div>
+      <div class="sub" id="mktRef" style="margin-top:8px"></div>
     </div>
     <div class="chips" id="chips"></div>
   </section>
@@ -653,7 +654,7 @@ td input{width:76px;padding:5px 6px;font-size:15px;text-align:right}
     <div class="sub" id="oddsSrc"></div>
     <div class="sub">Escribe la cuota de tu casa de apuestas. Verás la ganancia esperada (EV) por cada L 1 apostado, según el modelo.</div>
     <div class="tbl"><table><thead><tr><th>Mercado</th><th>Prob.</th><th>Cuota justa</th><th>Tu cuota</th><th>EV</th><th></th></tr></thead><tbody id="mk"></tbody></table></div>
-    <div class="note"><b>Cómo leerlo.</b> En las pruebas históricas el modelo no superó a las casas de apuestas. Subestima a los favoritos fuertes y a los equipos que dominan córners y tiros. Si el modelo y la cuota difieren por 8 puntos o más, lo normal es que el error sea del modelo. Un EV positivo no es una señal de compra.</div>
+    <div class="note"><b>Cómo leerlo.</b> Prueba con 2.300 partidos pasados de las 3 ligas: el modelo no superó a las casas de apuestas, y las apuestas donde el modelo veía "valor" perdieron dinero (entre −15% y −30%; entre más grande el supuesto valor, peor). El modelo subestima a los favoritos fuertes (cuando el mercado da 70–80%, el modelo da ~69% y ganaron ~81%). Córners y tiros salieron bien calibrados. Si el modelo y la cuota difieren por 8 puntos o más, casi siempre el error es del modelo. Un EV positivo no es una señal de compra.</div>
   </section>
 
   <section class="card" aria-label="Bitácora">
@@ -791,6 +792,14 @@ function render(){
   if(fx&&fx.odds){
     cur.rows.forEach((r,i)=>{const v=r.key&&fx.odds[r.key]; if(v){$("o"+i).value=v;onOdds(i);n++;}});
   }
+  let ref=`<b>Rango típico de error del modelo:</b> ±8 puntos en el 1X2 (en 2.300 partidos pasados, la diferencia con las casas fue menor a eso el 80% de las veces).`;
+  const o=fx&&fx.odds;
+  if(o&&o["1"]&&o["X"]&&o["2"]){
+    const q=[1/o["1"],1/o["X"],1/o["2"]], t=q[0]+q[1]+q[2], m=q.map(x=>x/t);
+    ref=`<b>Casas de apuestas (sin margen):</b> ${h} ${pct(m[0])} · Empate ${pct(m[1])} · ${a} ${pct(m[2])}. En las pruebas con partidos pasados, esta cifra acertó más que el modelo; úsala como referencia principal. `+ref;
+  }
+  if(L.kind==="elo") ref=`<b>Champions League:</b> sin validar con partidos pasados. Como referencia, en las 3 ligas el modelo se desvió de las casas hasta ±8 puntos en el 1X2; aquí el error puede ser mayor.`;
+  $("mktRef").innerHTML=ref;
   $("oddsSrc").textContent=n?`Cuotas cargadas automáticamente (${n}): promedio de varias casas (football-data.co.uk). Solo vienen 1X2 y más/menos 2.5. Cámbialas por las de tu casa.`:"";
 }
 function onOdds(i){
