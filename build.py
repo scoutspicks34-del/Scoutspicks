@@ -378,15 +378,48 @@ def parse_fdorg(js):
     return out
 
 
+TSDB_LG = {"bundesliga": "German_Bundesliga", "premier": "English_Premier_League", "laliga": "Spanish_La_Liga", "ucl": "UEFA_Champions_League"}
+ALIAS.update({"spurs": "Tottenham", "man utd": "Man United", "racing santander": "Santander", "deportivo la coruna": "La Coruna"})
+
+
+def parse_fpl(fixtures, boot):
+    """Marcadores finales de la API pública de la Fantasy Premier League (solo Premier League)."""
+    nm = {t["id"]: t["name"] for t in (boot or {}).get("teams", [])}
+    out = []
+    for f in fixtures or []:
+        if not (f.get("finished") or f.get("finished_provisional")):
+            continue
+        if f.get("team_h_score") is None or f.get("team_a_score") is None or f.get("team_h") not in nm or f.get("team_a") not in nm:
+            continue
+        out.append((_ymd(f.get("kickoff_time") or ""), nm[f["team_h"]], nm[f["team_a"]], int(f["team_h_score"]), int(f["team_a_score"]), ""))
+    return out
+
+
+def parse_tsdb(js):
+    """Marcadores finales de TheSportsDB (clave gratuita pública)."""
+    out = []
+    for e in (js or {}).get("events") or []:
+        stt = str(e.get("strStatus") or "").lower()
+        if not (stt in ("match finished", "ft", "aet", "finished", "after extra time") or "finish" in stt):
+            continue
+        try:
+            hg, ag = int(e["intHomeScore"]), int(e["intAwayScore"])
+        except (TypeError, ValueError, KeyError):
+            continue
+        out.append((_ymd(e.get("dateEvent") or ""), e.get("strHomeTeam") or "", e.get("strAwayTeam") or "", hg, ag, ""))
+    return out
+
+
 def _get_json(label, url, headers=None):
     try:
         r = requests.get(url, timeout=30, headers=headers or {"User-Agent": "Mozilla/5.0"})
         r.raise_for_status()
         return r.json()
     except Exception as e:  # noqa: BLE001
+        why = getattr(getattr(e, "response", None), "status_code", None) or type(e).__name__
         log(f"  {label}: {str(e)[:120]}")
-        if label not in EXTRA_ERR:
-            EXTRA_ERR.append(label)
+        if not any(x.startswith(label) for x in EXTRA_ERR):
+            EXTRA_ERR.append(f"{label} ({why})")
         return None
 
 
@@ -403,6 +436,19 @@ def live_rows(key, since, today):
     if key in OLDB_LG:
         js = _get_json("OpenLigaDB", f"https://api.openligadb.de/getmatchdata/{OLDB_LG[key]}/{y}")
         out.append(("OpenLigaDB", inr(parse_openliga(js))))
+    if key == "premier":
+        fx = _get_json("FPL", "https://fantasy.premierleague.com/api/fixtures/")
+        bt = _get_json("FPL", "https://fantasy.premierleague.com/api/bootstrap-static/") if fx else None
+        out.append(("FPL", inr(parse_fpl(fx, bt))))
+    if key in TSDB_LG:
+        rows, day = [], dt.date(d0 // 10000, d0 // 100 % 100, d0 % 100)
+        while day <= today and len(rows) < 400:
+            js = _get_json("TheSportsDB", f"https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d={day:%Y-%m-%d}&l={TSDB_LG[key]}")
+            if js is None:
+                break
+            rows += parse_tsdb(js)
+            day += dt.timedelta(days=1)
+        out.append(("TheSportsDB", inr(rows)))
     if key in ESPN_LG:
         js = _get_json("ESPN", f"https://site.api.espn.com/apis/site/v2/sports/soccer/{ESPN_LG[key]}/scoreboard?dates={d0}-{d1}&limit=300")
         out.append(("ESPN", inr(parse_espn(js))))
