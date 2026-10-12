@@ -378,7 +378,7 @@ def parse_fdorg(js):
     return out
 
 
-TSDB_LG = {"bundesliga": "German_Bundesliga", "premier": "English_Premier_League", "laliga": "Spanish_La_Liga", "ucl": "UEFA_Champions_League"}
+TSDB_LG = {"bundesliga": 4331, "premier": 4328, "laliga": 4335, "ucl": 4480}
 ALIAS.update({"spurs": "Tottenham", "man utd": "Man United", "racing santander": "Santander", "deportivo la coruna": "La Coruna"})
 
 
@@ -441,17 +441,17 @@ def live_rows(key, since, today):
         bt = _get_json("FPL", "https://fantasy.premierleague.com/api/bootstrap-static/") if fx else None
         out.append(("FPL", inr(parse_fpl(fx, bt))))
     if key in TSDB_LG:
+        js = _get_json("TheSportsDB", f"https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id={TSDB_LG[key]}")
+        out.append(("TheSportsDB", inr(parse_tsdb(js))))
+    if key in ESPN_LG:
         rows, day = [], dt.date(d0 // 10000, d0 // 100 % 100, d0 % 100)
-        while day <= today and len(rows) < 400:
-            js = _get_json("TheSportsDB", f"https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d={day:%Y-%m-%d}&l={TSDB_LG[key]}")
+        while day <= today:
+            js = _get_json("ESPN", f"https://site.api.espn.com/apis/site/v2/sports/soccer/{ESPN_LG[key]}/scoreboard?dates={day:%Y%m%d}")
             if js is None:
                 break
-            rows += parse_tsdb(js)
+            rows += parse_espn(js)
             day += dt.timedelta(days=1)
-        out.append(("TheSportsDB", inr(rows)))
-    if key in ESPN_LG:
-        js = _get_json("ESPN", f"https://site.api.espn.com/apis/site/v2/sports/soccer/{ESPN_LG[key]}/scoreboard?dates={d0}-{d1}&limit=300")
-        out.append(("ESPN", inr(parse_espn(js))))
+        out.append(("ESPN", inr(rows)))
     return out
 
 
