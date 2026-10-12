@@ -129,8 +129,11 @@ def league_params(df, ref):
         form[t] = s
     ht = sorted(set(df.HomeTeam) | set(df.AwayTeam))
     hi = {t: i for i, t in enumerate(ht)}
-    hm = [[int(d.strftime("%Y%m%d")), hi[h], hi[a], int(x), int(y)]
-          for d, h, a, x, y in zip(df.Date, df.HomeTeam, df.AwayTeam, df.FTHG, df.FTAG)]
+    nan = pd.Series([np.nan] * len(df), index=df.index)
+    hcs, acs = df["HC"] if "HC" in df.columns else nan, df["AC"] if "AC" in df.columns else nan
+    hm = [[int(d.strftime("%Y%m%d")), hi[h], hi[a], int(x), int(y),
+           int(c1) if pd.notna(c1) else -1, int(c2) if pd.notna(c2) else -1]
+          for d, h, a, x, y, c1, c2 in zip(df.Date, df.HomeTeam, df.AwayTeam, df.FTHG, df.FTAG, hcs, acs)]
     return {"updated": str(df.Date.max().date()), "n": int(len(df)), "models": models,
             "teams": teams, "form": form, "inj": None, "hteams": ht, "hm": hm}
 
@@ -678,14 +681,16 @@ select,input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;b
 .hgrid{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
 .ht{display:flex;flex-direction:column;gap:8px;min-width:0}
 .ht h3{font:700 17px/1.2 var(--disp);letter-spacing:-.01em}
-.hsum{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.hsum{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
 .hsum div{background:var(--soft);border-radius:12px;padding:8px 10px;font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px;line-height:1.25}
 .hsum b{font:700 18px/1 var(--disp);color:var(--ink);letter-spacing:-.02em}
-.hr{display:grid;grid-template-columns:58px 22px 1fr;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
+.hr{display:grid;grid-template-columns:58px 22px 1fr;gap:8px;align-items:start;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
 .hr:first-of-type{border-top:0}
-.hd{color:var(--muted);font-size:12px;line-height:1.2;white-space:nowrap}
-.hc{font:700 10px var(--disp);width:22px;height:22px;border-radius:7px;display:grid;place-items:center;color:#fff}
+.hd{color:var(--muted);font-size:12px;line-height:1.2;white-space:nowrap;padding-top:4px}
+.hc{margin-top:1px;font:700 10px var(--disp);width:22px;height:22px;border-radius:7px;display:grid;place-items:center;color:#fff}
 .hc.G{background:var(--good)} .hc.E{background:#8791b4} .hc.P{background:var(--bad)}
+.hbox{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hk{font-size:12px;color:var(--muted)}
 .hm{display:flex;flex-wrap:wrap;gap:0 6px;align-items:baseline;min-width:0}
 .hm .me{font-weight:700}
 .hm .sc{font:700 15px var(--disp);padding:0 2px}
@@ -959,24 +964,26 @@ function lastMatches(r,n){
   const i=L.hteams.indexOf(r.name); if(i<0)return [];
   const out=[];
   for(let k=L.hm.length-1;k>=0&&out.length<n;k--){const m=L.hm[k];
-    if(m[1]===i||m[2]===i)out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],home:m[1]===i});}
+    if(m[1]===i||m[2]===i)out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],hc:m[5],ac:m[6],home:m[1]===i});}
   return out;
 }
 function matchRow(m,me){
   const gf=m.home?m.hg:m.ag, ga=m.home?m.ag:m.hg, res=gf>ga?"G":gf===ga?"E":"P";
   const nm=(t)=>t===me?`<span class="me">${esc(t)}</span>`:`<span>${esc(t)}</span>`;
-  return `<div class="hr"><span class="hd">${ymd(m.d)}</span><span class="hc ${res}">${res}</span><span class="hm">${nm(m.h)}<span class="sc">${m.hg}–${m.ag}</span>${nm(m.a)}</span></div>`;
+  const ck=(m.hc>=0&&m.ac>=0)?`<span class="hk">Córners ${m.hc}–${m.ac} (${m.hc+m.ac} en total)</span>`:"";
+  return `<div class="hr"><span class="hd">${ymd(m.d)}</span><span class="hc ${res}">${res}</span><div class="hbox"><span class="hm">${nm(m.h)}<span class="sc">${m.hg}–${m.ag}</span>${nm(m.a)}</span>${ck}</div></div>`;
 }
 function histCol(team,res){
   if(!res)return `<div class="ht"><h3>${esc(team)}</h3><div class="empty">No tenemos el historial de este club. Solo hay datos de Bundesliga, Premier League y La Liga.</div></div>`;
   const ms=lastMatches(res,8);
   if(!ms.length)return `<div class="ht"><h3>${esc(team)}</h3><div class="empty">Sin partidos en los datos.</div></div>`;
-  let gf=0,ga=0,bt=0,o25=0;
-  ms.forEach(m=>{const f=m.home?m.hg:m.ag,c=m.home?m.ag:m.hg;gf+=f;ga+=c;if(f>0&&c>0)bt++;if(f+c>=3)o25++;});
+  let gf=0,ga=0,bt=0,o25=0,cf=0,cc=0,nc=0;
+  ms.forEach(m=>{const f=m.home?m.hg:m.ag,c=m.home?m.ag:m.hg;gf+=f;ga+=c;if(f>0&&c>0)bt++;if(f+c>=3)o25++;
+    if(m.hc>=0&&m.ac>=0){cf+=m.home?m.hc:m.ac;cc+=m.home?m.ac:m.hc;nc++;}});
   const n=ms.length, av=x=>(x/n).toFixed(1);
   return `<div class="ht"><h3>${esc(team)}</h3>
     ${res.local?`<div class="sub">Sus últimos partidos de liga local (no incluye Champions).</div>`:""}
-    <div class="hsum"><div><b>${av(gf)} – ${av(ga)}</b>Goles a favor y en contra por partido</div><div><b>${bt} de ${n}</b>Ambos anotaron</div><div><b>${o25} de ${n}</b>Más de 2.5 goles</div></div>
+    <div class="hsum"><div><b>${av(gf)} – ${av(ga)}</b>Goles a favor y en contra por partido</div><div><b>${bt} de ${n}</b>Ambos anotaron</div><div><b>${o25} de ${n}</b>Más de 2.5 goles</div>${nc?`<div><b>${(cf/nc).toFixed(1)} – ${(cc/nc).toFixed(1)}</b>Córners a favor y en contra por partido</div>`:""}</div>
     <div>${ms.map(m=>matchRow(m,res.name)).join("")}</div></div>`;
 }
 function renderHist(h,a){
@@ -986,7 +993,7 @@ function renderHist(h,a){
   if(rh&&ra&&rh.key===ra.key){
     const L=DATA.leagues[rh.key], i=L.hteams.indexOf(rh.name), j=L.hteams.indexOf(ra.name), out=[];
     for(let k=L.hm.length-1;k>=0&&out.length<6;k--){const m=L.hm[k];
-      if((m[1]===i&&m[2]===j)||(m[1]===j&&m[2]===i))out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],home:m[1]===i});}
+      if((m[1]===i&&m[2]===j)||(m[1]===j&&m[2]===i))out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],hc:m[5],ac:m[6],home:m[1]===i});}
     h2=out.length?`<div class="h2h"><h3>Enfrentamientos directos</h3><div class="sub">Solo informativo: el modelo no usa estos resultados. G, E y P son desde el punto de vista de ${esc(rh.name)}.</div><div>${out.map(m=>matchRow(m,rh.name)).join("")}</div></div>`
       :`<div class="h2h"><h3>Enfrentamientos directos</h3><div class="empty">No se han enfrentado en los últimos años de datos.</div></div>`;
   }
