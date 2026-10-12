@@ -952,6 +952,38 @@ function injHtml(h,a){
                    :`<div class="none"><b>${esc(t)}</b>: sin bajas reportadas</div>`;};
   return one(h)+one(a);
 }
+/* ---------- recalcular con las cuotas que escribe el usuario ---------- */
+let userOdds={}, userMatch="";
+function nm(f,x0,iter){
+  let P=[x0,[x0[0]+0.4,x0[1]],[x0[0],x0[1]+0.4]].map(x=>({x:x,v:f(x)}));
+  for(let k=0;k<iter;k++){
+    P.sort((a,b)=>a.v-b.v);
+    const c=[(P[0].x[0]+P[1].x[0])/2,(P[0].x[1]+P[1].x[1])/2], w=P[2];
+    const r=[2*c[0]-w.x[0],2*c[1]-w.x[1]], fr=f(r);
+    if(fr<P[0].v){const e=[3*c[0]-2*w.x[0],3*c[1]-2*w.x[1]],fe=f(e);P[2]=fe<fr?{x:e,v:fe}:{x:r,v:fr};}
+    else if(fr<P[1].v){P[2]={x:r,v:fr};}
+    else{const t=[(c[0]+w.x[0])/2,(c[1]+w.x[1])/2],ft=f(t);
+      if(ft<w.v)P[2]={x:t,v:ft};
+      else for(const i of [1,2]){const x=[(P[0].x[0]+P[i].x[0])/2,(P[0].x[1]+P[i].x[1])/2];P[i]={x:x,v:f(x)};}}
+  }
+  P.sort((a,b)=>a.v-b.v); return P[0];
+}
+function fairFrom(o){
+  if(!(o["1"]>1&&o["X"]>1&&o["2"]>1))return null;
+  const q=[1/o["1"],1/o["X"],1/o["2"]],t=q[0]+q[1]+q[2];
+  return {p:q.map(x=>x/t),margin:t-1};
+}
+function mlFromOdds(o){
+  const fr=fairFrom(o); if(!fr)return null;
+  let po=null; if(o["o:goals:2.5"]>1&&o["u:goals:2.5"]>1){const a=1/o["o:goals:2.5"],b=1/o["u:goals:2.5"];po=a/(a+b);}
+  const f=x=>{const m=scoreMatrix(Math.exp(x[0]),Math.exp(x[1]));let w=0,d=0,l=0,ov=0;
+    for(let i=0;i<m.length;i++)for(let j=0;j<m.length;j++){const v=m[i][j];if(i>j)w+=v;else if(i===j)d+=v;else l+=v;if(i+j>=3)ov+=v;}
+    let e=(w-fr.p[0])**2+(d-fr.p[1])**2+(l-fr.p[2])**2; if(po!==null)e+=(ov-po)**2; return e;};
+  const best=nm(f,[Math.log(1.4),Math.log(1.1)],160);
+  const lh=Math.exp(best.x[0]), la=Math.exp(best.x[1]);
+  return (best.v<2e-3&&lh>0.05&&lh<7&&la>0.05&&la<7)?[lh,la]:null;
+}
+function rowKey(r){return r.key||(r.sec+"|"+r.label);}
 const MONTHS=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
 function ymd(n){const y=Math.floor(n/10000),m=Math.floor(n/100)%100,d=n%100;return d+" "+MONTHS[m-1]+" "+String(y).slice(2);}
 function resolveHist(team){
@@ -1005,7 +1037,10 @@ function render(){
   if(h===a){$("mk").innerHTML=`<div class="empty">Elige dos equipos distintos.</div>`;$("hist").innerHTML="";$("h2h").innerHTML="";return;}
   const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
   const fx=(DATA.fixtures||[]).find(f=>f.lg===league&&f.h===h&&f.a===a);
-  cur=compute(h,a,fh,fa,fx&&fx.ml?fx.ml:null);
+  const mk0=league+"|"+h+"|"+a; if(mk0!==userMatch){userOdds={};userMatch=mk0;}
+  const uml=mlFromOdds(userOdds);
+  const ml=uml||(fx&&fx.ml?fx.ml:null);
+  cur=compute(h,a,fh,fa,ml); cur.src=uml?"user":(ml?"fx":null);
   $("hMeta").textContent=L.name+(fx?", "+dtxt(fx.date):"");
   $("hn").textContent=h; $("an").textContent=a; renderHist(h,a);
   $("hf").innerHTML=formHtml(h); $("af").innerHTML=formHtml(a);
@@ -1016,16 +1051,17 @@ function render(){
   seg("sH",pH);seg("sD",pD);seg("sA",pA);
   $("lHn").textContent=h; $("lAn").textContent=a;
   $("lH").textContent=pct(pH)+" de ganar"; $("lD").textContent=pct(pD); $("lA").textContent=pct(pA)+" de ganar";
-  const o=fx&&fx.odds; let m=null;
-  if(o&&o["1"]&&o["X"]&&o["2"]){const q=[1/o["1"],1/o["X"],1/o["2"]],t=q[0]+q[1]+q[2];m=q.map(x=>x/t);}
+  const mo=fairFrom(userOdds)?userOdds:(fx&&fx.odds), fr=mo?fairFrom(mo):null, m=fr?fr.p:null, who=fairFrom(userOdds)?"tu casa":"las casas de apuestas";
   $("ticks").innerHTML=m?`<div class="tick" style="left:${(m[0]*100).toFixed(1)}%"></div><div class="tick" style="left:${((m[0]+m[1])*100).toFixed(1)}%"></div>`:"";
-  $("mktRef").textContent=m?`Las marcas punteadas muestran lo que dan las casas de apuestas, sin margen: ${h} ${pct(m[0])}, empate ${pct(m[1])}, ${a} ${pct(m[2])}.`
-    :(L.kind==="elo"?"Champions League: la fuente de datos no trae cuotas, así que no hay marcas de comparación.":"No hay cuotas de las casas para este partido, así que no hay marcas de comparación.");
+  $("mktRef").textContent=m?`Las marcas punteadas muestran lo que da ${who}, sin margen: ${h} ${pct(m[0])}, empate ${pct(m[1])}, ${a} ${pct(m[2])}. El margen de ${who} en este mercado es ${(fr.margin*100).toFixed(1)}%.`
+    :(L.kind==="elo"?"No hay cuotas en la fuente de datos. Escribe las cuotas de tu casa (1, X y 2) en Mercados y cuotas y la barra se recalcula con ellas.":"No hay cuotas de las casas para este partido. Escribe las de tu casa (1, X y 2) en Mercados y cuotas y la barra se recalcula con ellas.");
   const how=[];
-  if(L.kind==="elo") how.push("Las probabilidades salen del ranking Elo de los clubes. No están validadas con partidos pasados de Champions, así que el error puede ser mayor que en las ligas.");
+  if(cur.src==="user") how.push("Estas probabilidades se calcularon a partir de las cuotas que escribiste (1, X y 2, y más/menos 2.5 si las pusiste), sin el margen de la casa. Ya no son las del modelo.");
+  else if(L.kind==="elo") how.push("Las probabilidades salen del ranking Elo de los clubes. No están validadas con partidos pasados de Champions, así que el error puede ser mayor que en las ligas. Si escribes las cuotas de tu casa, se recalculan con ellas.");
   else if(m) how.push("En las pruebas con partidos pasados, las casas de apuestas acertaron más que el modelo. Úsalas como referencia principal.");
   else how.push("Estas probabilidades son del modelo estadístico (goles de las últimas temporadas). Sin cuotas de las casas no hay con qué compararlas.");
-  if(cur.fromMkt) how.push("Resultado, goles, más o menos y ambos anotan están calculados a partir de las cuotas de las casas; en las pruebas salieron más precisos que los del modelo. Córners y tiros siguen siendo del modelo.");
+  if(cur.fromMkt&&cur.src!=="user") how.push("Resultado, goles, más o menos y ambos anotan están calculados a partir de las cuotas de las casas; en las pruebas salieron más precisos que los del modelo. Córners y tiros siguen siendo del modelo.");
+  if(cur.src==="user") how.push("Como las probabilidades salen de tu casa, el EV de esas filas solo refleja su margen. Córners y tiros siguen siendo del modelo.");
   if(!cur.fromMkt&&L.kind!=="elo") how.push("Rango típico de error del modelo: ±8 puntos en el 1X2 (en 2.300 partidos pasados, la diferencia con las casas fue menor a eso el 80% de las veces).");
   $("howTxt").innerHTML=how.map(x=>`<p>${esc(x)}</p>`).join("");
   $("chips").innerHTML=[["Más de 2.5 goles",pct(cur.o25)],["Ambos anotan",pct(cur.bt)],...cur.chips.map(c=>[c[0]+" esperados",c[1]])]
@@ -1046,9 +1082,11 @@ function render(){
   if(sec)html+="</details>";
   $("mk").innerHTML=html;
   let n=0;
-  if(fx&&fx.odds){
-    cur.rows.forEach((r,i)=>{const v=r.key&&fx.odds[r.key]; if(v){$("o"+i).value=v;onOdds(i);n++;}});
-  }
+  cur.rows.forEach((r,i)=>{
+    const k=rowKey(r); let v=userOdds[k];
+    if(v===undefined&&fx&&fx.odds&&r.key&&fx.odds[r.key]){v=fx.odds[r.key];n++;}
+    if(v!==undefined){$("o"+i).value=v;onOdds(i);}
+  });
   $("oddsSrc").textContent=n?`Cuotas cargadas automáticamente (${n}): promedio de varias casas (football-data.co.uk). Solo vienen 1X2 y más/menos 2.5. Cámbialas por las de tu casa.`:"";
 }
 function onOdds(i){
@@ -1143,7 +1181,16 @@ $("copy").addEventListener("click",()=>{
 });
 
 $("adjH").addEventListener("change",render); $("adjA").addEventListener("change",render);
-$("mk").addEventListener("input",ev=>{if(ev.target.dataset.i!==undefined&&ev.target.tagName==="INPUT")onOdds(+ev.target.dataset.i);});
+$("mk").addEventListener("input",ev=>{
+  if(ev.target.dataset.i===undefined||ev.target.tagName!=="INPUT")return;
+  const i=+ev.target.dataset.i, v=parseFloat(ev.target.value.replace(",","."));
+  if(v>1)userOdds[rowKey(cur.rows[i])]=v; else delete userOdds[rowKey(cur.rows[i])];
+  onOdds(i);
+});
+$("mk").addEventListener("change",ev=>{
+  if(ev.target.dataset.i===undefined||ev.target.tagName!=="INPUT")return;
+  if(["1","X","2","o:goals:2.5","u:goals:2.5"].includes(cur.rows[+ev.target.dataset.i].key))render();
+});
 $("mk").addEventListener("click",ev=>{if(ev.target.tagName==="BUTTON"&&!ev.target.disabled)addPick(+ev.target.dataset.i);});
 const sync=()=>{render();fxList();}; $("home").addEventListener("change",sync); $("away").addEventListener("change",sync);
 
