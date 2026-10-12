@@ -391,6 +391,18 @@ ELO_NAMES = {
 }
 
 
+# Elo copiado a mano de clubelo.com (capturas del 11-oct-2026). Se usa solo si clubelo.com no responde desde GitHub.
+STATIC_ELO_DATE = "2026-10-11"
+STATIC_ELO = {
+    "Bayern Munich": 2049, "Arsenal": 2043, "Manchester City": 2035, "Barcelona": 2026, "Real Madrid": 1975,
+    "Paris Saint-Germain": 1958, "Inter Milan": 1949, "Liverpool": 1930, "Atlético Madrid": 1907,
+    "Borussia Dortmund": 1895, "Aston Villa": 1894, "Sporting Lisbon": 1877, "Manchester United": 1876,
+    "Roma": 1857, "Porto": 1842, "Napoli": 1839, "RB Leipzig": 1825, "Stuttgart": 1824, "Real Betis": 1823,
+    "Lens": 1817, "Club Brugge": 1812, "Como": 1807, "Galatasaray": 1798, "Villarreal": 1796,
+    "PSV Eindhoven": 1787, "Fenerbahçe": 1785,
+}
+
+
 def ucl_params(today, text=None):
     """Elo de cada club (clubelo.com) para la Champions League."""
     if text is None:
@@ -412,7 +424,10 @@ def ucl_params(today, text=None):
             if text:
                 break
     if not text:
-        return None
+        log("  clubelo no responde: se usa el Elo guardado del " + STATIC_ELO_DATE)
+        elo = {k: float(v) for k, v in STATIC_ELO.items()}
+        return {"name": "Champions League", "kind": "elo", "elo": elo, "hfa": 100, "T": 2.9,
+                "updated": STATIC_ELO_DATE, "n": 0, "models": {}, "teams": sorted(elo), "form": {}, "inj": None}
     try:
         df = pd.read_csv(io.StringIO(text))
         table = {norm(str(c)): float(e) for c, e in zip(df["Club"], df["Elo"])}
@@ -482,6 +497,8 @@ def build(template, out_path="docs/index.html"):
     if "ucl" not in params:
         det = [l.strip() for l in LOG if "clubelo" in l or "Elo" in l]
         note += " (Champions: no se pudo leer clubelo.com. " + (det[-1][:260] if det else "sin detalle") + ")"
+    if "ucl" in params and params["ucl"]["updated"] == STATIC_ELO_DATE != today.isoformat():
+        note += f" Champions: Elo guardado del {STATIC_ELO_DATE} (clubelo.com no responde); faltan 10 equipos pequeños."
     log(note)
     data = {"leagues": params, "fixtures": fixtures, "note": note,
             "generated": local.strftime("%Y-%m-%d %H:%M") + " (hora de Honduras)"}
