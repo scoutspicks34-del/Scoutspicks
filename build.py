@@ -12,7 +12,7 @@ LEAGUES = {
     "laliga": dict(name="La Liga", code="SP1", api=140),
 }
 MARKETS = {"corners": ("HC", "AC"), "sot": ("HST", "AST"), "shots": ("HS", "AS")}
-KEEP = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "HS", "AS", "HST", "AST", "HC", "AC"]
+KEEP = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "HS", "AS", "HST", "AST", "HC", "AC", "HY", "AY", "HR", "AR"]
 API = "https://v3.football.api-sports.io"
 KEY = os.environ.get("API_FOOTBALL_KEY", "").strip()
 HN = dt.timedelta(hours=-6)  # Honduras UTC-6
@@ -131,9 +131,19 @@ def league_params(df, ref):
     hi = {t: i for i, t in enumerate(ht)}
     nan = pd.Series([np.nan] * len(df), index=df.index)
     hcs, acs = df["HC"] if "HC" in df.columns else nan, df["AC"] if "AC" in df.columns else nan
+    def _cards(y, r):  # tarjetas del equipo: amarillas + rojas (-1 si faltan datos)
+        if not (pd.notna(y) and pd.notna(r)):
+            return -1
+        return int(y) + int(r)
+
+    def _col(n):
+        return df[n] if n in df.columns else nan
+
+    hks = [_cards(y, r) for y, r in zip(_col("HY"), _col("HR"))]
+    aks = [_cards(y, r) for y, r in zip(_col("AY"), _col("AR"))]
     hm = [[int(d.strftime("%Y%m%d")), hi[h], hi[a], int(x), int(y),
-           int(c1) if pd.notna(c1) else -1, int(c2) if pd.notna(c2) else -1]
-          for d, h, a, x, y, c1, c2 in zip(df.Date, df.HomeTeam, df.AwayTeam, df.FTHG, df.FTAG, hcs, acs)]
+           int(c1) if pd.notna(c1) else -1, int(c2) if pd.notna(c2) else -1, k1, k2]
+          for d, h, a, x, y, c1, c2, k1, k2 in zip(df.Date, df.HomeTeam, df.AwayTeam, df.FTHG, df.FTAG, hcs, acs, hks, aks)]
     return {"updated": str(df.Date.max().date()), "n": int(len(df)), "models": models,
             "teams": teams, "form": form, "inj": None, "hteams": ht, "hm": hm}
 
@@ -698,6 +708,24 @@ select,input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;b
 .h2h h3{font:700 17px/1.2 var(--disp)}
 @media (min-width:700px){.hgrid{grid-template-columns:1fr 1fr;column-gap:24px}}
 /* mercados */
+.trend{display:flex;flex-direction:column;gap:10px}
+.tcat{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;font:700 13px var(--disp);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+.tcat span{font:500 12px var(--body);letter-spacing:0;text-transform:none}
+.trow{border:1px solid var(--line);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.thead{font-weight:600;font-size:14.5px}
+.tl{display:grid;grid-template-columns:minmax(0,84px) 1fr 34px;gap:8px;align-items:center;font-size:12.5px}
+.tl .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.tl b{text-align:right;font:700 13px var(--disp)}
+.sq{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.sq i{height:9px;border-radius:2px;background:var(--line)}
+.sq i.y{background:var(--good)} .sq i.n{background:var(--bad)}
+.tcmp{font-size:12px;color:var(--muted);line-height:1.35}
+.feat{display:flex;flex-direction:column}
+.fp{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);padding:11px 6px;cursor:pointer}
+.fp:first-child{border-top:0}
+.fp:hover{background:var(--soft)}
+.fp .ft{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.fp .fm{font-weight:600;font-size:14px;line-height:1.3}
 .callout{background:var(--warn-bg);color:var(--ink);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4}
 .grp{border-top:1px solid var(--line)}
 .grp>summary{padding:13px 0;font:700 15px var(--disp)}
@@ -777,6 +805,11 @@ select,input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;b
         </div>
       </details>
     </section>
+    <section class="panel" aria-label="Picks destacados">
+      <div class="panel-h"><h2>Picks destacados</h2><span class="sub">Rachas de los últimos 10</span></div>
+      <div class="feat" id="feat"></div>
+      <div class="sub" id="featNote"></div>
+    </section>
   </aside>
 
   <main class="main">
@@ -812,6 +845,17 @@ select,input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;b
           </div>
         </div>
       </details>
+    </section>
+
+    <section class="panel" aria-label="Rachas de los últimos 10 partidos">
+      <h2>Rachas (últimos 10)</h2>
+      <div class="sub">Cada cuadro es un partido de liga: verde si se cumplió y rojo si no. El de la derecha es el más reciente.</div>
+      <div class="trend" id="trend"></div>
+      <details class="how"><summary>Qué tan confiable es una racha</summary><div class="body">
+        <p>Una racha cuenta lo que pasó, no lo que va a pasar. En 4.725 partidos pasados de Bundesliga, Premier y La Liga, cuando los dos equipos traían 8 o más de 10 en "más de 2.5 goles", se cumplió el 69% de las veces, no el 80–90%. Las casas ya daban 65% en esos partidos.</p>
+        <p>En córners (más de 9.5) fue 68% contra 52% de base, y en tarjetas (más de 3.5) fue 74% contra 61% de base. Ahí la racha sí aportó algo, pero no tenemos cuotas de córners ni tarjetas para saber si pagan bien.</p>
+        <p>Las tarjetas son amarillas más rojas. Algunas casas cuentan distinto (por ejemplo, la roja como 2), así que revisa cómo cuenta la tuya.</p>
+      </div></details>
     </section>
 
     <section class="panel" aria-label="Historial reciente">
@@ -996,8 +1040,82 @@ function lastMatches(r,n){
   const i=L.hteams.indexOf(r.name); if(i<0)return [];
   const out=[];
   for(let k=L.hm.length-1;k>=0&&out.length<n;k--){const m=L.hm[k];
-    if(m[1]===i||m[2]===i)out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],hc:m[5],ac:m[6],home:m[1]===i});}
+    if(m[1]===i||m[2]===i)out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],hc:m[5],ac:m[6],kh:m[7]===undefined?-1:m[7],ka:m[8]===undefined?-1:m[8],home:m[1]===i});}
   return out;
+}
+/* Rachas (L10). Cada mercado dice si un partido "cumplió". need = dato que debe existir. */
+const TM=[
+  {cat:"Goles",label:"Más de 2.5 goles",f:m=>m.tot>=3,odds:"o:goals:2.5"},
+  {cat:"Goles",label:"Menos de 2.5 goles",f:m=>m.tot<=2,odds:"u:goals:2.5"},
+  {cat:"Goles",label:"Ambos anotan",f:m=>m.f>0&&m.c>0},
+  {cat:"Goles",label:"No anotan los dos",f:m=>!(m.f>0&&m.c>0)},
+  {cat:"Córners",label:"Más de 8.5 córners",need:"cor",ln:8.5,f:m=>m.cor>8.5},
+  {cat:"Córners",label:"Más de 9.5 córners",need:"cor",ln:9.5,f:m=>m.cor>9.5},
+  {cat:"Córners",label:"Más de 10.5 córners",need:"cor",ln:10.5,f:m=>m.cor>10.5},
+  {cat:"Tarjetas",label:"Más de 3.5 tarjetas",need:"crd",ln:3.5,f:m=>m.crd>3.5},
+  {cat:"Tarjetas",label:"Más de 4.5 tarjetas",need:"crd",ln:4.5,f:m=>m.crd>4.5},
+  {cat:"Tarjetas",label:"Más de 5.5 tarjetas",need:"crd",ln:5.5,f:m=>m.crd>5.5}
+];
+const TCAT={Goles:["tot","goles"],Córners:["cor","córners"],Tarjetas:["crd","tarjetas"]};
+function teamTrend(res){
+  return lastMatches(res,10).reverse().map(m=>{const f=m.home?m.hg:m.ag,c=m.home?m.ag:m.hg;
+    return {f:f,c:c,tot:f+c,cor:(m.hc>=0&&m.ac>=0)?m.hc+m.ac:null,crd:(m.kh>=0&&m.ka>=0)?m.kh+m.ka:null};});
+}
+function trendHits(ms,def){
+  const arr=ms.map(m=>(def.need&&m[def.need]===null)?null:!!def.f(m)), ok=arr.filter(x=>x!==null);
+  return {arr:arr,n:ok.length,k:ok.filter(Boolean).length};
+}
+function sqHtml(t){
+  const pad=10-t.arr.length;
+  return `<div class="sq" role="img" aria-label="${t.k} de ${t.n}">${Array.from({length:10},(_,i)=>{const v=i<pad?null:t.arr[i-pad];return `<i class="${v===null?"":v?"y":"n"}"></i>`;}).join("")}</div>`;
+}
+function houseLine(def,fx,comb){
+  const o=fx&&fx.odds&&def.odds?fx.odds[def.odds]:null; if(!(o>1))return "";
+  const other=def.odds.startsWith("o:")?fx.odds["u:goals:2.5"]:def.odds.startsWith("u:")?fx.odds["o:goals:2.5"]:null;
+  let p=1/o,tag="incluye margen"; if(other>1){p=(1/o)/(1/o+1/other);tag="sin margen";}
+  return `Cuota ${f2(o)}: la casa da ${pct(p)} (${tag}). Las rachas juntas dan ${pct(comb)}, que no es una probabilidad.`;
+}
+function renderTrends(h,a,fx){
+  const rh=resolveHist(h), ra=resolveHist(a);
+  if(!rh||!ra){$("trend").innerHTML=`<div class="empty">No tenemos el historial de uno de los clubes, así que no hay rachas.</div>`;return;}
+  const A=teamTrend(rh), B=teamTrend(ra); let html="";
+  Object.keys(TCAT).forEach(cat=>{
+    const key=TCAT[cat][0], av=ms=>{const v=ms.map(m=>m[key]).filter(x=>x!==null);return v.length?(v.reduce((s,x)=>s+x,0)/v.length).toFixed(1):null;};
+    const ah=av(A), ab=av(B); let rows="";
+    TM.filter(d=>d.cat===cat).forEach(def=>{
+      const x=trendHits(A,def), y=trendHits(B,def); if(x.n<5||y.n<5)return;
+      const comb=(x.k/x.n+y.k/y.n)/2, hl=houseLine(def,fx,comb);
+      rows+=`<div class="trow"><div class="thead">${esc(def.label)}</div>
+        <div class="tl"><span class="who">${esc(h)}</span>${sqHtml(x)}<b>${x.k}/${x.n}</b></div>
+        <div class="tl"><span class="who">${esc(a)}</span>${sqHtml(y)}<b>${y.k}/${y.n}</b></div>${hl?`<div class="tcmp">${esc(hl)}</div>`:""}</div>`;
+    });
+    if(!rows)return;
+    html+=`<div class="tcat">${cat}${ah&&ab?`<span>Promedio por partido: ${esc(h)} ${ah}, ${esc(a)} ${ab}</span>`:""}</div>${rows}`;
+  });
+  $("trend").innerHTML=html||`<div class="empty">Faltan partidos para calcular rachas.</div>`;
+}
+function renderFeat(){
+  const list=fxOfLeague().filter(f=>f.date.slice(0,10)===day), items=[];
+  list.forEach(f=>{
+    const rh=resolveHist(f.h), ra=resolveHist(f.a); if(!rh||!ra)return;
+    const A=teamTrend(rh), B=teamTrend(ra), best={};
+    TM.forEach(def=>{
+      const x=trendHits(A,def), y=trendHits(B,def); if(x.n<8||y.n<8)return;
+      const rx=x.k/x.n, ry=y.k/y.n; if(Math.min(rx,ry)<0.7)return;
+      const it={f:f,def:def,x:x,y:y,score:(rx+ry)/2}, b=best[def.cat];
+      if(!b||(def.ln?def.ln>b.def.ln:it.score>b.score))best[def.cat]=it;
+    });
+    Object.keys(best).forEach(c=>items.push(best[c]));
+  });
+  items.sort((p,q)=>q.score-p.score);
+  $("feat").innerHTML=items.length?items.slice(0,5).map(it=>{
+    const f=it.f, o=it.def.odds&&f.odds?f.odds[it.def.odds]:null;
+    return `<button class="fp" type="button" data-f="${DATA.fixtures.indexOf(f)}"><span class="ft"><span>${esc(f.h)} vs ${esc(f.a)}</span><span>${esc(f.date.slice(11,16))}${o>1?" · cuota "+f2(o):""}</span></span>
+      <span class="fm">${esc(it.def.label)}</span>
+      <span class="tl"><span class="who">${esc(f.h)}</span>${sqHtml(it.x)}<b>${it.x.k}/${it.x.n}</b></span>
+      <span class="tl"><span class="who">${esc(f.a)}</span>${sqHtml(it.y)}<b>${it.y.k}/${it.y.n}</b></span></button>`;}).join("")
+    :`<div class="empty">Ningún partido de este día tiene una racha de 7 de 10 o más en los dos equipos.</div>`;
+  $("featNote").textContent="Solo se muestran mercados donde los dos equipos cumplieron 7 de 10 o más. Racha no es probabilidad: mira el aviso en Rachas.";
 }
 function matchRow(m,me){
   const gf=m.home?m.hg:m.ag, ga=m.home?m.ag:m.hg, res=gf>ga?"G":gf===ga?"E":"P";
@@ -1034,7 +1152,7 @@ function renderHist(h,a){
 function render(){
   const h=$("home").value,a=$("away").value,L=DATA.leagues[league];
   $("upd").innerHTML=(L.kind==="elo"?"Ranking Elo del "+esc(L.updated):"Datos hasta "+esc(L.updated))+"<br>Actualizado "+esc((DATA.generated||"—").slice(0,16));
-  if(h===a){$("mk").innerHTML=`<div class="empty">Elige dos equipos distintos.</div>`;$("hist").innerHTML="";$("h2h").innerHTML="";return;}
+  if(h===a){$("mk").innerHTML=`<div class="empty">Elige dos equipos distintos.</div>`;$("hist").innerHTML="";$("h2h").innerHTML="";$("trend").innerHTML="";return;}
   const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
   const fx=(DATA.fixtures||[]).find(f=>f.lg===league&&f.h===h&&f.a===a);
   const mk0=league+"|"+h+"|"+a; if(mk0!==userMatch){userOdds={};userMatch=mk0;}
@@ -1042,7 +1160,7 @@ function render(){
   const ml=uml||(fx&&fx.ml?fx.ml:null);
   cur=compute(h,a,fh,fa,ml); cur.src=uml?"user":(ml?"fx":null);
   $("hMeta").textContent=L.name+(fx?", "+dtxt(fx.date):"");
-  $("hn").textContent=h; $("an").textContent=a; renderHist(h,a);
+  $("hn").textContent=h; $("an").textContent=a; renderHist(h,a); renderTrends(h,a,fx);
   $("hf").innerHTML=formHtml(h); $("af").innerHTML=formHtml(a);
   $("inj").innerHTML=L.kind==="elo"?`<div class="none">Champions League: las probabilidades salen del ranking Elo de los clubes (sin córners ni tiros, porque no hay datos comparables entre ligas). No están validadas con partidos pasados.</div>`:injHtml(h,a);
   $("xh").textContent=cur.lh.toFixed(2); $("xa").textContent=cur.la.toFixed(2);
@@ -1111,10 +1229,16 @@ function fxList(){
   $("fxList").innerHTML=list.length?list.map(f=>`<button class="fx" type="button" data-f="${DATA.fixtures.indexOf(f)}" aria-current="${f.h===h&&f.a===a}"><span class="tm">${esc(f.date.slice(11,16))}</span><span class="tt"><span>${esc(f.h)}</span><span class="v">${esc(f.a)}</span></span></button>`).join("")
     :`<div class="empty">No hay partidos próximos de ${esc(DATA.leagues[league].name)} en la fuente de datos. Elige los equipos a mano.</div>`;
   $("manual").open=!list.length;
+  renderFeat();
 }
 function pickMatch(f){
   $("home").value=f.h; $("away").value=f.a; $("adjH").value="0"; $("adjA").value="0"; render(); fxList();
 }
+$("feat").addEventListener("click",ev=>{
+  const b=ev.target.closest("button[data-f]"); if(!b)return;
+  pickMatch(DATA.fixtures[+b.dataset.f]);
+  document.getElementById("trend").scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+});
 $("fxList").addEventListener("click",ev=>{
   const b=ev.target.closest("button[data-f]"); if(!b)return;
   pickMatch(DATA.fixtures[+b.dataset.f]);
