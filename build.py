@@ -1,4 +1,4 @@
-"""Scout Picks: descarga datos, ajusta el modelo, consulta la API y genera docs/index.html."""
+"""Picks Fresh: descarga datos, ajusta el modelo, consulta la API y genera docs/index.html."""
 import io, os, re, sys, json, difflib, unicodedata, datetime as dt
 from pathlib import Path
 import numpy as np
@@ -575,7 +575,7 @@ def build(template, out_path="docs/index.html"):
 
 
 TEMPLATE = r'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light}body{margin:0}</style>
-<title>Scout Picks</title>
+<title>Picks Fresh</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap">
 <style>
@@ -759,7 +759,7 @@ select,input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;b
 </head><body>
 <div class="app">
   <header class="top">
-    <div class="brand"><span class="logo" aria-hidden="true"><i></i><i></i><i></i></span>Scout Picks</div>
+    <div class="brand"><span class="logo" aria-hidden="true"><i></i><i></i><i></i></span>Picks Fresh</div>
     <div class="upd" id="upd"></div>
   </header>
 
@@ -846,7 +846,7 @@ select,input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;b
     </section>
 
     <p class="foot" id="fxNote"></p>
-    <p class="foot">Scout Picks usa estadísticas de equipos (goles, córners, tiros) de las últimas temporadas. No considera alineaciones, lesiones ni árbitro. Apuesta solo lo que puedas perder y no intentes recuperar pérdidas.</p>
+    <p class="foot">Picks Fresh usa estadísticas de equipos (goles, córners, tiros) de las últimas temporadas. No considera alineaciones, lesiones ni árbitro. Apuesta solo lo que puedas perder y no intentes recuperar pérdidas.</p>
   </main>
 </div>
 
