@@ -1179,11 +1179,14 @@ ul.exp b{font-weight:800}
 .rl{display:flex;gap:4px;flex-wrap:wrap;margin-top:12px}
 .rl i{font-style:normal;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font:800 13px/1 var(--body);color:#fff}
 .rl i.G{background:#1f9d6e} .rl i.E{background:#6f8b7e} .rl i.P{background:#cf4a56}
-.ev .evr{display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:baseline;padding:11px 0;border-top:1px solid var(--line);font-size:15px}
-.ev h3+.sub+.evr,.ev h3+.evr{border-top:0}
-.evc{font:800 18px/1 var(--disp);font-stretch:80%}
+.ev .evr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"t p" "c p";gap:2px 12px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:15px}
+.ev .evg{margin-top:14px;font:700 12px/1.2 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ev .evr .evt{grid-area:t} .ev .evr .evc{grid-area:c} .ev .evr .evp{grid-area:p;font-size:22px;text-align:right}
+.evt i{font-style:normal;color:var(--muted);font-size:13.5px}
+.evc{font:700 15px/1.2 var(--body);color:var(--ink);text-align:left}
+.ev .evg{text-align:left}
 .evt{color:var(--ink);line-height:1.35;text-align:left}
-.ev,.ev .sub,.ev h3{text-align:left}
+.ev,.ev .sub,.ev h3,.ev .evr{text-align:left}
 .evp{font:800 19px/1 var(--disp);font-stretch:80%}
 .evp.g{color:var(--good)} .evp.m{color:var(--vis)} .evp.b{color:var(--bad)}
 
@@ -1896,21 +1899,24 @@ function h2hRaw(h,a,k){
 /* Líneas de evidencia: cuántas veces se cumplió en los partidos del contexto (local en casa, visitante fuera). */
 function evRows(h,a,test,o){
   const rows=[], rh=resolveHist(h), ra=resolveHist(a), ph=o.h!==false&&rh, pa=o.a!==false&&ra;
-  const add=(arrs,txt)=>{let x=0,n=0;arrs.forEach(ms=>ms.forEach(m=>{const r=test(m);if(r!==null){n++;if(r)x++;}}));if(n)rows.push({x:x,n:n,p:x/n,txt:txt});};
+  // una línea por equipo y contexto: "X de Y partidos", sin mezclar a los dos equipos en una sola fracción
+  const add1=(ms,team,ctx,grp)=>{let x=0,n=0;ms.forEach(m=>{const r=test(m);if(r!==null){n++;if(r)x++;}});if(n)rows.push({x:x,n:n,p:x/n,team:team,ctx:ctx,grp:grp});};
   [5,10,20].forEach(k=>{
-    const who=[ph?h+" de local":"",pa?a+" de visitante":""].filter(Boolean).join(" · ");
-    add([ph?domMatches(rh,k,"home").map(nrm):[],pa?domMatches(ra,k,"away").map(nrm):[]],"últimos "+k+": "+who);
+    const g="Últimos "+k+" (local en casa, visitante fuera)";
+    if(ph)add1(domMatches(rh,k,"home").map(nrm),h,"de local",g);
+    if(pa)add1(domMatches(ra,k,"away").map(nrm),a,"de visitante",g);
   });
-  const nm2=[ph?h:"",pa?a:""].filter(Boolean).join(" y ");
-  add([ph?domMatches(rh,10,"all").map(nrm):[],pa?domMatches(ra,10,"all").map(nrm):[]],"últimos 10 de "+nm2+", local y visita");
-  if(o.h2h!==false)add([h2hRaw(h,a,5).map(r=>nrm(o.flip?Object.assign({},r,{home:!r.home}):r))],"enfrentamientos directos (últimos 5)");
-  const ch=uclName(h), ca=uclName(a), mh=o.h!==false&&ch?uclMatches(ch,5).map(nrm):[], ma=o.a!==false&&ca?uclMatches(ca,5).map(nrm):[];
-  const who=[mh.length?h+(mh.length<5?" ("+mh.length+")":""):"",ma.length?a+(ma.length<5?" ("+ma.length+")":""):""].filter(Boolean).join(" y ");
-  if(who)add([mh,ma],"en Champions: últimos 5 de "+who);   // solo cuenta a los equipos que sí tienen partidos; sin ninguno, la fila no aparece
+  const g2="Últimos 10 en general (local y visita)";
+  if(ph)add1(domMatches(rh,10,"all").map(nrm),h,"general",g2);
+  if(pa)add1(domMatches(ra,10,"all").map(nrm),a,"general",g2);
+  if(o.h2h!==false)add1(h2hRaw(h,a,5).map(r=>nrm(o.flip?Object.assign({},r,{home:!r.home}):r)),"Enfrentamientos directos","últimos 5","Entre ellos");
+  const ch=uclName(h), ca=uclName(a);   // solo aparecen los equipos que sí tienen partidos de Champions; sin ninguno, no hay fila
+  if(o.h!==false&&ch)add1(uclMatches(ch,5).map(nrm),h,"en Champions","Champions League (últimos 5)");
+  if(o.a!==false&&ca)add1(uclMatches(ca,5).map(nrm),a,"en Champions","Champions League (últimos 5)");
   return rows;
 }
 function evCard(title,rows,note){
-  return `<div class="box ev"><h3>${esc(title)}</h3>${note?`<div class="sub">${esc(note)}</div>`:""}${rows.length?rows.map(r=>`<div class="evr"><span class="evc">${r.x}/${r.n}</span><span class="evt">${esc(r.txt)}</span><span class="evp ${pcls(r.p)}">${Math.round(r.p*100)}%</span></div>`).join(""):`<div class="empty">No hay suficientes partidos para calcular esto.</div>`}</div>`;
+  return `<div class="box ev"><h3>${esc(title)}</h3>${note?`<div class="sub">${esc(note)}</div>`:""}${rows.length?rows.map((r,i)=>(i&&rows[i-1].grp===r.grp?"":`<div class="evg">${esc(r.grp)}</div>`)+`<div class="evr"><span class="evt"><b>${esc(r.team)}</b> <i>(${esc(r.ctx)})</i></span><span class="evc">${r.x} de ${r.n} ${r.n===1?"partido":"partidos"}</span><span class="evp ${pcls(r.p)}">${Math.round(r.p*100)}%</span></div>`).join(""):`<div class="empty">No hay suficientes partidos para calcular esto.</div>`}</div>`;
 }
 const EVNOTE="Cuántas veces se cumplió en esos partidos. Verde: 70% o más. Naranja: entre 50% y 69%. Rojo: menos de 50%. Es historia, no una probabilidad.";
 function renderStats(h,a,fx){
