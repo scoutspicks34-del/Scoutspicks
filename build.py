@@ -222,6 +222,110 @@ def match_team(name, teams):
     return None
 
 
+# ------------------------------------------------------------------ resultados extra
+OF_FILES = {"bundesliga": ("deutschland", "1-bundesliga.txt"), "premier": ("england", "1-premierleague.txt"),
+            "laliga": ("espana", "1-liga.txt")}
+OF_ALIAS = {"fc bayern munchen": "Bayern Munich", "borussia dortmund": "Dortmund", "1 fc koln": "FC Koln",
+            "borussia monchengladbach": "M'gladbach", "eintracht frankfurt": "Ein Frankfurt", "sv 07 elversberg": "Elversberg",
+            "bayer 04 leverkusen": "Leverkusen", "1 fsv mainz 05": "Mainz", "sc paderborn 07": "Paderborn",
+            "tsg 1899 hoffenheim": "Hoffenheim", "hamburger sv": "Hamburg", "fc schalke 04": "Schalke 04",
+            "1 fc union berlin": "Union Berlin", "sv werder bremen": "Werder Bremen", "vfb stuttgart": "Stuttgart",
+            "sc freiburg": "Freiburg", "fc augsburg": "Augsburg", "rb leipzig": "RB Leipzig",
+            "manchester united fc": "Man United", "manchester city fc": "Man City", "tottenham hotspur fc": "Tottenham",
+            "newcastle united fc": "Newcastle", "nottingham forest fc": "Nott'm Forest", "brighton hove albion fc": "Brighton",
+            "afc bournemouth": "Bournemouth", "leeds united fc": "Leeds", "hull city afc": "Hull", "ipswich town fc": "Ipswich",
+            "coventry city fc": "Coventry", "sunderland afc": "Sunderland", "crystal palace fc": "Crystal Palace",
+            "everton fc": "Everton", "fulham fc": "Fulham", "chelsea fc": "Chelsea", "arsenal fc": "Arsenal",
+            "liverpool fc": "Liverpool", "aston villa fc": "Aston Villa", "brentford fc": "Brentford",
+            "malaga cf": "Malaga", "rcd espanyol de barcelona": "Espanol", "rayo vallecano de madrid": "Vallecano",
+            "athletic club": "Ath Bilbao", "deportivo alaves": "Alaves", "club atletico de madrid": "Ath Madrid",
+            "fc barcelona": "Barcelona", "real madrid cf": "Real Madrid", "villarreal cf": "Villarreal", "elche cf": "Elche",
+            "rc celta de vigo": "Celta", "real sociedad de futbol": "Sociedad", "rc deportivo la coruna": "La Coruna",
+            "real betis balompie": "Betis", "ca osasuna": "Osasuna", "real racing club de santander": "Santander",
+            "valencia cf": "Valencia", "levante ud": "Levante", "sevilla fc": "Sevilla", "getafe cf": "Getafe"}
+ALIAS.update(OF_ALIAS)
+
+
+def manual_frames(code):
+    """Resultados cargados a mano (data/resultados_manuales.csv). Si la fuente principal ya trae el partido, gana la fuente principal."""
+    p = Path(__file__).parent / "data" / "resultados_manuales.csv"
+    try:
+        m = pd.read_csv(p, encoding="utf8")
+    except Exception as e:  # noqa: BLE001
+        log(f"  resultados manuales: no se pudo leer ({e})")
+        return []
+    m = m[m.Div.astype(str).str.strip() == code].drop(columns=["Div", "fuente"], errors="ignore")
+    if len(m):
+        log(f"  {code}: {len(m)} resultados manuales")
+    return [m] if len(m) else []
+
+
+def of_extra(key, df, today, text=None):
+    """Partidos que faltan en football-data y sí están en openfootball (solo goles). Devuelve un DataFrame o None."""
+    if key not in OF_FILES:
+        return None
+    repo, fn = OF_FILES[key]
+    y = today.year if today.month >= 7 else today.year - 1
+    if text is None:
+        for br in ("master", "main"):
+            try:
+                r = requests.get(f"https://raw.githubusercontent.com/openfootball/{repo}/{br}/{y}-{(y + 1) % 100:02d}/{fn}", timeout=40)
+                r.raise_for_status()
+                text = r.text
+                break
+            except Exception as e:  # noqa: BLE001
+                log(f"  openfootball {repo} {br}: {str(e)[:100]}")
+        if text is None:
+            return None
+    cur = df[df.season == df.season.max()]
+    teams = set(cur.HomeTeam) | set(cur.AwayTeam)
+    have = {}
+    for d, h, a in zip(cur.Date, cur.HomeTeam, cur.AwayTeam):
+        have.setdefault((h, a), []).append(d)
+    out, bad = [], set()
+    for d, h, a, x, y2, _, _ in uclhist.parse(text, y, raw=True):
+        mh, ma = match_team(h, teams), match_team(a, teams)
+        if not mh or not ma or mh == ma:
+            bad.add(h if not mh else a)
+            continue
+        dd = pd.to_datetime(str(d))
+        if any(abs((dd - e).days) <= 3 for e in have.get((mh, ma), [])):
+            continue
+        out.append({"Date": dd, "HomeTeam": mh, "AwayTeam": ma, "FTHG": x, "FTAG": y2})
+    if bad:
+        log(f"  openfootball {key}: sin equivalencia de nombre: {', '.join(sorted(bad))}")
+    if out:
+        log(f"  openfootball {key}: {len(out)} partidos que faltaban (solo goles)")
+    return pd.DataFrame(out) if out else None
+
+
+def add_extra(df, extra):
+    if extra is None or not len(extra):
+        return df
+    y = extra.Date.dt.year.where(extra.Date.dt.month >= 7, extra.Date.dt.year - 1)
+    extra = extra.copy()
+    extra["season"] = (y % 100).astype(str).str.zfill(2) + ((y + 1) % 100).astype(str).str.zfill(2)
+    return pd.concat([df, extra], ignore_index=True).sort_values("Date").reset_index(drop=True)
+
+
+def recent_results(params, uclh, today, days=3):
+    """Partidos ya jugados en los últimos días, para mostrar su marcador final en la lista."""
+    cut = int((today - dt.timedelta(days=days)).strftime("%Y%m%d"))
+    out = []
+    for key, P in params.items():
+        if key == "ucl":
+            rows = [(r[0], r[1], r[2], r[3], r[4]) for r in uclh if r[0] >= cut]
+            names = None
+        else:
+            ht = P["hteams"]
+            rows = [(r[0], ht[r[1]], ht[r[2]], r[3], r[4]) for r in P["hm"] if r[0] >= cut]
+        for d, h, a, x, y in rows:
+            ds = str(d)
+            out.append({"id": f"res-{key}-{d}-{h}", "lg": key, "date": f"{ds[:4]}-{ds[4:6]}-{ds[6:]}T00:00", "status": "FT",
+                        "h": h, "a": a, "odds": {}, "score": [int(x), int(y)]})
+    return out
+
+
 # ------------------------------------------------------------------ API
 def api(path, params):
     if not KEY:
@@ -615,7 +719,8 @@ def build(template, out_path="docs/index.html"):
     for key, v in LEAGUES.items():
         log(f"{v['name']}:")
         try:
-            df = prepare(fetch_frames(v["code"], seasons))
+            df = prepare(manual_frames(v["code"]) + fetch_frames(v["code"], seasons))
+            df = add_extra(df, of_extra(key, df, today))
             ref = df.Date.max() + pd.Timedelta(days=1)
             params[key] = league_params(df, ref)
             params[key]["name"] = v["name"]
@@ -639,7 +744,10 @@ def build(template, out_path="docs/index.html"):
             ml = market_lambdas(f["odds"], st)
             if ml:
                 f["ml"] = ml
-    fixtures = sorted(fixtures + ucl_fixtures(params, today), key=lambda x: x["date"])
+    uclh = load_uclh()
+    done = recent_results(params, uclh, today)
+    seen = {(d["lg"], d["h"], d["a"]) for d in done}
+    fixtures = sorted([f for f in fixtures if (f["lg"], f["h"], f["a"]) not in seen] + ucl_fixtures(params, today) + done, key=lambda x: x["date"])
     if "ucl" not in params:
         det = [l.strip() for l in LOG if "clubelo" in l or "Elo" in l]
         note += " (Champions: no se pudo leer clubelo.com. " + (det[-1][:260] if det else "sin detalle") + ")"
@@ -647,7 +755,6 @@ def build(template, out_path="docs/index.html"):
         falta = [t for t in UCL_TEAMS if t not in params["ucl"]["elo"]]
         note += f" Champions: Elo guardado del {STATIC_ELO_DATE}." + (" Faltan: " + ", ".join(falta) + "." if falta else "")
     log(note)
-    uclh = load_uclh()
     data = {"leagues": params, "fixtures": fixtures, "note": note, "uclh": uclh, "uclalias": ucl_alias(params, uclh),
             "generated": local.strftime("%Y-%m-%d %H:%M") + " (hora de Honduras)"}
     html = template.replace("__PARAMS__", json.dumps(data, separators=(",", ":"), ensure_ascii=False))
@@ -781,8 +888,8 @@ details[open]>summary::after{transform:rotate(-135deg)}
 .pnum .pl{display:flex;align-items:center;gap:6px}
 .mkn{font-size:12.5px;color:var(--chalk2);margin-top:12px;line-height:1.4}
 
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;margin-top:2px}
-.tabs button{border:0;background:transparent;border-radius:12px;padding:10px 2px;font-weight:700;font-size:14px;color:var(--muted);white-space:nowrap}
+.tabs{display:flex;justify-content:space-between;gap:0;overflow-x:auto;scrollbar-width:none;position:sticky;top:0;z-index:5;background:var(--bg);padding:12px 0 10px;margin-top:2px}
+.tabs button{flex:0 0 auto;border:0;background:transparent;border-radius:12px;padding:10px 5px;font-weight:700;font-size:13.5px;color:var(--muted);white-space:nowrap}
 .tabs button[aria-selected="true"]{background:var(--paper);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--ink)}
 .pane>.box:first-child{margin-top:4px}
 
@@ -834,6 +941,36 @@ details[open]>summary::after{transform:rotate(-135deg)}
 .thead{font-weight:700;font-size:16px;margin-bottom:2px}
 .tcmp{font-size:13px;color:var(--muted);line-height:1.4;margin-top:8px}
 
+/* ---- tabla, marcador final y qué esperar ---- */
+.msc{display:flex;align-items:center;justify-content:center;gap:6px;font:800 26px/1 var(--disp);font-stretch:72%}
+.msc span{color:var(--muted);font-size:18px}
+.mc.fin .mtime{font-size:15px;letter-spacing:.04em}
+.tbl-wrap{overflow-x:auto;margin:10px -16px 0;padding:0 16px;-webkit-overflow-scrolling:touch}
+table.st{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:13px}
+.st th{font:700 10px/1 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.02em;padding:8px 3px;text-align:center;border-bottom:1px solid var(--line);background:var(--paper)}
+.st td{padding:9px 3px;min-width:26px;text-align:center;border-bottom:1px solid var(--line);background:var(--paper);font-variant-numeric:tabular-nums;white-space:nowrap}
+.st .c1{position:sticky;left:0;z-index:2;width:28px;min-width:28px;text-align:center;font-weight:800;color:var(--muted)}
+.st .c2{position:sticky;left:28px;z-index:2;text-align:left;width:98px;max-width:98px;min-width:98px;padding-left:4px;overflow:hidden;text-overflow:ellipsis;font-weight:700;color:var(--ink);box-shadow:6px 0 8px -6px rgba(0,0,0,.6)}
+.st .pt{font:800 15px/1 var(--disp);color:var(--ink);min-width:34px}
+.st .dg{color:var(--muted)}
+.st tr.hh td{background:#10301f}.st tr.aa td{background:#33270c}
+.st tr.hh .c1{box-shadow:inset 3px 0 0 var(--good)}.st tr.aa .c1{box-shadow:inset 3px 0 0 var(--vis)}
+.st tr.hh .c2,.st tr.aa .c2{color:#fff}
+.f5{display:inline-flex;gap:3px;vertical-align:middle}
+.f5 i{font-style:normal;width:16px;height:16px;border-radius:5px;display:grid;place-items:center;font:800 9px/1 var(--body);color:#fff}
+.f5 i.G{background:#1f9d6e}.f5 i.E{background:#6f8b7e}.f5 i.P{background:#cf4a56}
+.tleg{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-top:8px}
+.tleg i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-2px}
+.tpos{display:grid;gap:6px;margin-top:10px}
+.tpos div{display:flex;justify-content:space-between;gap:10px;font-size:15px}
+.tpos b{font-weight:800}
+ul.exp{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+ul.exp li{font-size:15px;line-height:1.45;padding-left:14px;position:relative}
+ul.exp li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:6px;border-radius:50%;background:var(--good)}
+ul.exp b{font-weight:800}
+.pc{display:inline-block;font:800 13px/1 var(--disp);font-stretch:80%;padding:3px 7px;border-radius:7px;background:var(--good-bg);color:var(--good);margin-left:3px}
+.pc.m{background:var(--warn-bg);color:var(--warn)}
+.exptit{font:800 17px/1.2 var(--body)}
 /* ---- estadísticas ---- */
 .seg.three{grid-template-columns:repeat(3,1fr)}
 .box.ctl{display:flex;flex-direction:column;gap:8px}
@@ -909,7 +1046,7 @@ details[open]>summary::after{transform:rotate(-135deg)}
 
 /* ---- navegación inferior ---- */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--paper);border-top:1px solid var(--line);padding:6px 12px calc(6px + env(safe-area-inset-bottom))}
-.nav .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.nav .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .nav button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;border-radius:12px;padding:7px 4px;font-size:13px;font-weight:700;color:var(--muted)}
 .nav button[aria-current="page"]{color:var(--ink);background:var(--soft)}
 .nav svg{width:24px;height:24px}
@@ -924,6 +1061,7 @@ details[open]>summary::after{transform:rotate(-135deg)}
   .mn{font-size:29px} .pnum b{font-size:40px}
   .mbot{grid-template-columns:1fr 84px 58px auto}
 }
+@media (max-width:380px){.tabs button{padding:10px 3px;font-size:13px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head><body>
@@ -966,6 +1104,10 @@ details[open]>summary::after{transform:rotate(-135deg)}
     </section>
 
     <!-- BITÁCORA -->
+    <section id="vTable" aria-label="Clasificación" hidden>
+      <div class="vh"><h2>Clasificación</h2><span class="sub" id="vtS"></span></div>
+      <div class="box" style="margin-top:6px"><div class="tbl-wrap" id="vtBody"></div><div class="sub" id="vtN" style="margin-top:10px"></div></div>
+    </section>
     <section id="vLog" aria-label="Bitácora de apuestas" hidden>
       <div class="vh"><h2>Bitácora</h2></div>
       <div class="sub">Tus apuestas anotadas, para comparar lo que dijo el modelo contra lo que pasó de verdad.</div>
@@ -1000,6 +1142,7 @@ details[open]>summary::after{transform:rotate(-135deg)}
         <button type="button" role="tab" data-t="sum" aria-selected="true">Resumen</button>
         <button type="button" role="tab" data-t="hist" aria-selected="false">Historial</button>
         <button type="button" role="tab" data-t="trend" aria-selected="false">Estadísticas</button>
+        <button type="button" role="tab" data-t="table" aria-selected="false">Tabla</button>
         <button type="button" role="tab" data-t="mk" aria-selected="false">Apostar</button>
       </div>
 
@@ -1009,6 +1152,7 @@ details[open]>summary::after{transform:rotate(-135deg)}
           <div class="sub" id="readout"></div>
           <div class="tiles" id="tiles"></div>
         </div>
+        <div class="box" id="expect" hidden></div>
         <div class="box">
           <h3>Cuotas de tu casa</h3>
           <div class="sub">Escribe las cuotas que te da tu casa de apuestas y recalculamos las probabilidades quitándoles el margen de la casa.</div>
@@ -1049,6 +1193,17 @@ details[open]>summary::after{transform:rotate(-135deg)}
         <div id="h2h"></div>
       </div>
 
+      <div class="pane" id="pTable" hidden>
+        <div class="box">
+          <h3>Clasificación</h3>
+          <div class="sub" id="tblS"></div>
+          <div class="tpos" id="tblPos"></div>
+          <div class="tleg"><span><i style="background:#10301f;box-shadow:inset 3px 0 0 var(--good)"></i>Local</span><span><i style="background:#33270c;box-shadow:inset 3px 0 0 var(--vis)"></i>Visitante</span></div>
+          <div class="tbl-wrap" id="tblBody"></div>
+          <div class="sub" id="tblN" style="margin-top:10px"></div>
+        </div>
+      </div>
+
       <div class="pane" id="pTrend" hidden>
         <div class="box">
           <h3>Estadísticas</h3>
@@ -1085,6 +1240,7 @@ details[open]>summary::after{transform:rotate(-135deg)}
 <nav class="nav" aria-label="Secciones"><div class="in">
   <button type="button" data-v="list" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M12 5v14"/><circle cx="12" cy="12" r="3"/></svg>Partidos</button>
   <button type="button" data-v="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg>Destacados</button>
+  <button type="button" data-v="table"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>Tabla</button>
   <button type="button" data-v="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M10 8h6M10 12h6"/></svg>Bitácora</button>
 </div></nav>
 <script>
@@ -1141,14 +1297,14 @@ function compute(h, a, fh, fa, ml){
   else { l0=lam(L.models.goles,h,a); }
   const rho = (!ml && L.kind!=="elo" && L.models.goles.rho) || 0;   // con cuotas o Elo no se aplica: esos goles esperados ya vienen de otro cálculo
   const lh = l0[0]*fh, la = l0[1]*fa, m = scoreMatrix(lh,la,rho);
-  let pH=0,pD=0,pA=0,o15=0,o25=0,o35=0,bt=0;
+  let pH=0,pD=0,pA=0,o15=0,o25=0,o35=0,bt=0; const tg=new Array(2*m.length).fill(0);
   for(let i=0;i<m.length;i++)for(let j=0;j<m.length;j++){
-    const v=m[i][j]; if(i>j)pH+=v; else if(i===j)pD+=v; else pA+=v;
+    const v=m[i][j]; tg[i+j]+=v; if(i>j)pH+=v; else if(i===j)pD+=v; else pA+=v;
     if(i+j>=2)o15+=v; if(i+j>=3)o25+=v; if(i+j>=4)o35+=v; if(i>=1&&j>=1)bt+=v;
   }
   if(ml){ bt=1/(1+Math.exp(-(Math.log(bt/(1-bt))+0.14))); }   // en pruebas, "ambos anotan" sale ~3 pts más alto de lo que da Poisson
   if(!ml && L.kind!=="elo" && L.models.goles.btb){ bt=L.models.goles.btw*bt+(1-L.models.goles.btw)*L.models.goles.btb; }   // el modelo solo exagera las diferencias entre partidos en "ambos anotan"
-  out.lh=lh; out.la=la; out.p=[pH,pD,pA]; out.o25=o25; out.bt=bt; out.fromMkt=!!ml;
+  out.lh=lh; out.la=la; out.p=[pH,pD,pA]; out.o25=o25; out.bt=bt; out.tg=tg; out.mk={}; out.fromMkt=!!ml;
   const R=(sec,label,p,key,fav)=>out.rows.push({sec,label,p,key,fav});
   R("Resultado",h+" gana",pH,"1",true); R("Resultado","Empate",pD,"X"); R("Resultado",a+" gana",pA,"2",true);
   R("Resultado","Doble oportunidad "+h+" o empate",pH+pD); R("Resultado","Doble oportunidad "+a+" o empate",pA+pD);
@@ -1159,13 +1315,118 @@ function compute(h, a, fh, fa, ml){
   for(const [k,c] of Object.entries(LINES)){
     const M=L.models[k]; if(!M) continue;
     const e0=lam(M,h,a), ch=e0[0]*fh, ca=e0[1]*fa, tot=ch+ca;
-    out.chips.push([c.n, ch.toFixed(1)+" – "+ca.toFixed(1)]);
+    out.chips.push([c.n, ch.toFixed(1)+" – "+ca.toFixed(1)]); out.mk[k]={n:c.n,tot:tot,at:M.at,ch:ch,ca:ca};
     for(const x of c.tot){const p=pOver(x,tot,M.at);
       R(c.n+" · total","Más de "+x,p,k==="corners"?"o:corners:"+x:null);
       R(c.n+" · total","Menos de "+x,1-p,k==="corners"?"u:corners:"+x:null);}
     for(const x of c.team){R(c.n+" · "+h,"Más de "+x,pOver(x,ch,M.ah));R(c.n+" · "+a,"Más de "+x,pOver(x,ca,M.aa));}
   }
   return out;
+}
+
+/* ---------- conclusiones rápidas ---------- */
+function pickLine(c){                      // c: [{lbl,p}] -> línea con 65-75% (la más cercana a 70%); si no hay, la más cercana por encima
+  const inr=c.filter(x=>x.p>=0.65&&x.p<=0.75).sort((a,b)=>Math.abs(a.p-0.70)-Math.abs(b.p-0.70));
+  if(inr.length)return inr[0];
+  const hi=c.filter(x=>x.p>0.75).sort((a,b)=>a.p-b.p);
+  return hi.length?hi[0]:null;
+}
+function safeLine(c,pick){                 // una línea más segura (80% o más) en la misma dirección
+  const hi=c.filter(x=>x.p>=0.80&&(!pick||x.p>pick.p+0.04)).sort((a,b)=>a.p-b.p);
+  return hi.length?hi[0]:null;
+}
+function linesOver(fn,lo,hi,unit){         // fn(línea) = prob. de "más de". Devuelve candidatos de más y de menos
+  const ov=[],un=[];
+  for(let x=lo;x<=hi;x+=1){const p=fn(x); ov.push({lbl:"Más de "+x+" "+unit,p:p,x:x}); un.push({lbl:"Menos de "+x+" "+unit,p:1-p,x:x});}
+  return {ov:ov,un:un};
+}
+function pcTag(p){return `<span class="pc${p>=0.65?"":" m"}">${pct(p)}</span>`;}
+function lineTxt(L,dirOver,central){       // dirección según el lado más probable en la línea central
+  const c=dirOver?L.ov:L.un, pk=pickLine(c); if(!pk)return null;
+  const sf=safeLine(c,pk);
+  return {pk:pk,sf:sf};
+}
+function expectHtml(h,a,c,fin){
+  if(fin)return "";
+  const li=[], esc2=esc;
+  const [pH,pD,pA]=c.p, fav=pH>=pA?[h,pH,pD+pH,"local"]:[a,pA,pD+pA,"visitante"];
+  if(fav[1]>=0.65)li.push(`<li><b>Ganador:</b> alta probabilidad de victoria para ${esc2(fav[0])} ${pcTag(fav[1])}.</li>`);
+  else if(Math.max(pH,pD,pA)>=0.5)li.push(`<li><b>Ganador:</b> ${esc2(fav[0])} es favorito ${pcTag(fav[1])}, pero no está asegurado. Opción más segura: ${esc2(fav[0])} o empate ${pcTag(fav[2])}.</li>`);
+  else li.push(`<li><b>Ganador:</b> partido parejo, sin favorito claro (${esc2(h)} ${pct(pH)}, empate ${pct(pD)}, ${esc2(a)} ${pct(pA)}). Opción más segura: ${pH>=pA?esc2(h):esc2(a)} o empate ${pcTag(fav[2])}.</li>`);
+  // goles: P(total > x) desde la distribución del modelo
+  const gp=x=>{let s=0;for(let k=0;k<c.tg.length;k++)if(k>x)s+=c.tg[k];return s;};
+  const G=linesOver(x=>gp(x),0.5,5.5,"goles"), gOver=gp(2.5)>=0.5, gl=lineTxt(G,gOver);
+  const gtype=c.o25>=0.60?"partido abierto":c.o25<=0.40?"partido cerrado":"partido equilibrado en goles";
+  if(gl)li.push(`<li><b>Goles:</b> se espera un ${gtype} (~${(c.lh+c.la).toFixed(1)} goles). Línea sugerida: ${gl.pk.lbl} ${pcTag(gl.pk.p)}.${gl.sf?` Más segura: ${gl.sf.lbl} ${pcTag(gl.sf.p)}.`:""}</li>`);
+  const bt=c.bt;
+  li.push(`<li><b>Ambos anotan:</b> ${bt>=0.65?`es probable que los dos marquen ${pcTag(bt)}`:bt<=0.35?`es probable que uno no marque (Ambos anotan: no ${pcTag(1-bt)})`:`sin ventaja clara (sí ${pct(bt)}, no ${pct(1-bt)})`}.</li>`);
+  const mk=c.mk||{}, one=(k,nm)=>{
+    const M=mk[k]; if(!M)return null;
+    const sd=Math.sqrt(M.tot+M.at*M.tot*M.tot), lo=Math.max(0.5,Math.floor(M.tot-2.2*sd)+0.5), hi=Math.floor(M.tot+2.2*sd)+0.5;
+    const L={ov:[],un:[]}; for(let x=lo;x<=hi;x+=1){const p=pOver(x,M.tot,M.at); L.ov.push({lbl:"Más de "+x+" "+nm,p:p,x:x}); L.un.push({lbl:"Menos de "+x+" "+nm,p:1-p,x:x});}
+    const over=pOver(Math.floor(M.tot)+0.5,M.tot,M.at)>=0.5, r=lineTxt(L,over); return r?{M:M,r:r}:null;
+  };
+  const co=one("corners","córners");
+  if(co)li.push(`<li><b>Córners:</b> se proyectan ~${co.M.tot.toFixed(1)} córners en total. Línea sugerida: ${co.r.pk.lbl} ${pcTag(co.r.pk.p)}.${co.r.sf?` Más segura: ${co.r.sf.lbl} ${pcTag(co.r.sf.p)}.`:""}</li>`);
+  const sh=one("shots","tiros totales"), so=one("sot","tiros a puerta");
+  if(sh||so){
+    const parts=[]; if(sh)parts.push(`~${sh.M.tot.toFixed(0)} tiros totales`); if(so)parts.push(`~${so.M.tot.toFixed(0)} a puerta`);
+    const sug=[sh,so].filter(Boolean).map(z=>`${z.r.pk.lbl} ${pcTag(z.r.pk.p)}`);
+    li.push(`<li><b>Tiros:</b> se esperan ${parts.join(" y ")}. Línea${sug.length>1?"s":""} sugerida${sug.length>1?"s":""}: ${sug.join(" · ")}.</li>`);
+  }
+  return `<div class="exptit">📌 Resumen de tendencias para este partido</div>
+    <ul class="exp">${li.join("")}</ul>
+    <div class="sub" style="margin-top:12px">Las líneas sugeridas son las que el modelo ubica entre 65% y 75% de probabilidad; si ninguna cae en ese rango, la más cercana por encima. Son probabilidades, no garantías. ${c.mk&&Object.keys(c.mk).length?"De córners y tiros no tenemos cuotas para saber si pagan bien.":""}</div>`;
+}
+
+/* ---------- clasificación ---------- */
+function standings(lg){
+  const L=DATA.leagues[lg]; let games=[], names=[], note="";
+  if(lg==="ucl"){
+    games=(DATA.uclh||[]).filter(r=>r[5]==="Fase de liga"&&r[0]>=20260701).map(r=>({h:r[1],a:r[2],hg:r[3],ag:r[4],d:r[0]}));
+    note="Fase de liga 2026/27 de la Champions. Los clubes con más jornadas jugadas suben primero; la tabla completa se llena jornada a jornada.";
+  }else{
+    const last=L.hm.length?L.hm[L.hm.length-1][0]:0, y=Math.floor(last/10000), mo=Math.floor(last/100)%100, st=(mo>=7?y:y-1)*10000+701;
+    games=L.hm.filter(m=>m[0]>=st).map(m=>({h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],d:m[0]}));
+    names=L.teams;
+    note="Datos hasta "+L.updated+". Orden: puntos, diferencia de goles y goles a favor. Las ligas reales pueden desempatar de otra forma (por ejemplo, el resultado entre los dos equipos en La Liga).";
+  }
+  const T={}, get=t=>T[t]||(T[t]={t:t,pj:0,g:0,e:0,p:0,gf:0,gc:0,pts:0,res:[]});
+  names.forEach(get);
+  games.sort((x,y)=>x.d-y.d).forEach(g=>{
+    const A=get(g.h), B=get(g.a);
+    A.pj++;B.pj++;A.gf+=g.hg;A.gc+=g.ag;B.gf+=g.ag;B.gc+=g.hg;
+    if(g.hg>g.ag){A.g++;B.p++;A.pts+=3;A.res.push("G");B.res.push("P");}
+    else if(g.hg<g.ag){B.g++;A.p++;B.pts+=3;A.res.push("P");B.res.push("G");}
+    else{A.e++;B.e++;A.pts++;B.pts++;A.res.push("E");B.res.push("E");}
+  });
+  const rows=Object.values(T).sort((x,y)=>y.pts-x.pts||(y.gf-y.gc)-(x.gf-x.gc)||y.gf-x.gf||x.t.localeCompare(y.t));
+  rows.forEach((r,i)=>{r.pos=i+1;});
+  return {rows:rows,note:note,n:games.length};
+}
+function tableHtml(lg,hl){                  // hl: [local, visitante] para resaltar
+  const S=standings(lg);
+  if(!S.rows.length||!S.n)return {html:`<div class="empty">Todavía no hay partidos de esta temporada en la fuente de datos.</div>`,S:S};
+  const th=["#","Equipo","PJ","G","E","P","GF","GC","DG","Pts","Últ. 5"].map((x,i)=>`<th class="${i===0?"c1":i===1?"c2":""}">${x}</th>`).join("");
+  const body=S.rows.map(r=>{
+    const cl=hl&&r.t===hl[0]?"hh":hl&&r.t===hl[1]?"aa":"", dg=r.gf-r.gc;
+    return `<tr class="${cl}"><td class="c1">${r.pos}</td><td class="c2" title="${esc(r.t)}">${esc(r.t)}</td><td>${r.pj}</td><td>${r.g}</td><td>${r.e}</td><td>${r.p}</td><td>${r.gf}</td><td>${r.gc}</td><td class="dg">${dg>0?"+":""}${dg}</td><td class="pt">${r.pts}</td><td><span class="f5">${r.res.slice(-5).map(x=>`<i class="${x}">${x}</i>`).join("")}</span></td></tr>`;}).join("");
+  return {html:`<table class="st"><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table>`,S:S};
+}
+function ord(n){return n+".º";}
+function renderTable(h,a){
+  const T=tableHtml(league,[h,a]), S=T.S;
+  $("tblBody").innerHTML=T.html; $("tblN").textContent=S.note;
+  const pj=S.rows.length?Math.max.apply(null,S.rows.map(r=>r.pj)):0;
+  $("tblS").textContent=DATA.leagues[league].name+(pj?" · temporada 2026/27 · hasta la jornada "+pj:"");
+  const f=t=>S.rows.find(r=>r.t===t);
+  const pos=[[h,"hh"],[a,"aa"]].map(([t])=>{const r=f(t);return r?`<div><span>${esc(t)}</span><b>${ord(r.pos)} de ${S.rows.length} · ${r.pts} pts · ${r.gf}-${r.gc} en goles</b></div>`:"";}).join("");
+  $("tblPos").innerHTML=pos;
+}
+function renderTableView(){
+  const T=tableHtml(league,null), L=DATA.leagues[league];
+  $("vtBody").innerHTML=T.html; $("vtN").textContent=T.S.note;
+  $("vtS").textContent=L.name;
 }
 
 /* ---------- interfaz ---------- */
@@ -1176,13 +1437,17 @@ function dparts(iso){const p=iso.slice(0,10).split("-").map(Number);const d=new 
 function dtxt(iso){const p=dparts(iso);return p.dow+" "+p.d+" "+p.mon+", "+iso.slice(11,16);}
 function fxOfLeague(){return (DATA.fixtures||[]).filter(f=>f.lg===league);}
 function daysOfLeague(){const out=[];fxOfLeague().forEach(f=>{const k=f.date.slice(0,10);if(!out.includes(k))out.push(k);});return out;}
+function defaultDay(days){
+  const up=days.find(k=>fxOfLeague().some(f=>f.date.slice(0,10)===k&&!f.score));
+  return up||days[days.length-1]||null;
+}
 function fillTeams(){
   const L=DATA.leagues[league];
   for(const id of ["home","away"]){
     $(id).innerHTML=L.teams.map(t=>`<option>${esc(t)}</option>`).join("");
   }
-  const days=daysOfLeague(); if(!days.includes(day)) day=days[0]||null;
-  const first=fxOfLeague().find(f=>f.date.slice(0,10)===day);
+  const days=daysOfLeague(); if(!days.includes(day)) day=defaultDay(days);
+  const first=fxOfLeague().find(f=>f.date.slice(0,10)===day&&!f.score)||fxOfLeague().find(f=>f.date.slice(0,10)===day);
   const pref=first?[first.h,first.a]:[L.teams[0],L.teams[1]];
   $("home").value=pref[0]; $("away").value=pref[1];
 }
@@ -1495,7 +1760,7 @@ function renderStats(h,a,fx){
 }
 function renderFeat(){
   const sc=league==="ucl"?"ucl":"all";
-  const list=fxOfLeague().filter(f=>f.date.slice(0,10)===day), items=[];
+  const list=fxOfLeague().filter(f=>f.date.slice(0,10)===day&&!f.score), items=[];
   list.forEach(f=>{
     const sh=seriesFor(f.h,sc,10), sa=seriesFor(f.a,sc,10); if(!sh.ok||!sa.ok)return;
     const A=toTrend(sh.ms), B=toTrend(sa.ms), best={};
@@ -1543,12 +1808,13 @@ function render(){
   updTxt();
   if(h===a)return;
   const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
-  const fx=(DATA.fixtures||[]).find(f=>f.lg===league&&f.h===h&&f.a===a);
+  const fxs=(DATA.fixtures||[]).filter(f=>f.lg===league&&f.h===h&&f.a===a), fx=fxs.find(f=>!f.score)||fxs[0];
+  const fin=fx&&fx.score;
   const mk0=league+"|"+h+"|"+a; if(mk0!==userMatch){userOdds={};userMatch=mk0;}
   const uml=mlFromOdds(userOdds);
   const ml=uml||(fx&&fx.ml?fx.ml:null);
   cur=compute(h,a,fh,fa,ml); cur.src=uml?"user":(ml?"fx":null);
-  $("hMeta").textContent=L.name+(fx?" · "+dtxt(fx.date):"");
+  $("hMeta").textContent=L.name+(fin?" · Final "+fx.score[0]+"–"+fx.score[1]:fx?" · "+dtxt(fx.date):"");
   $("hn").textContent=h; $("an").textContent=a; fitName($("hn")); fitName($("an"));
   $("hf").innerHTML=formHtml(h); $("af").innerHTML=formHtml(a);
   const [pH,pD,pA]=cur.p;
@@ -1561,7 +1827,7 @@ function render(){
   $("mkNote").textContent=m?`Las líneas punteadas marcan lo que dan ${who}, sin margen: ${h} ${pct(m[0])}, empate ${pct(m[1])}, ${a} ${pct(m[2])}.`:"";
   // resumen
   const top=[[h,pH],["empate",pD],[a,pA]].sort((x,y)=>y[1]-x[1])[0];
-  $("readout").textContent=(top[0]==="empate"?"Lo más probable es un empate":"Lo más probable es que gane "+top[0])+" ("+pct(top[1])+"). Es un cálculo con datos pasados, no una garantía.";
+  $("readout").textContent=fin?"Terminó "+h+" "+fx.score[0]+"–"+fx.score[1]+" "+a+". Ya cuenta en el historial y en la tabla de los dos equipos. Las probabilidades de abajo ya incluyen ese resultado, así que no son un pronóstico previo.":(top[0]==="empate"?"Lo más probable es un empate":"Lo más probable es que gane "+top[0])+" ("+pct(top[1])+"). Es un cálculo con datos pasados, no una garantía.";
   const tile=(v,t,s)=>`<div class="tile"><b>${v}</b><span>${t}</span><small>${s}</small></div>`;
   $("tiles").innerHTML=tile(cur.lh.toFixed(2)+" – "+cur.la.toFixed(2),"Goles esperados","Promedio que se espera de cada equipo. No es un marcador.")
     +tile(pct(cur.o25),"Más de 2.5 goles","Probabilidad de que haya 3 goles o más.")
@@ -1588,7 +1854,8 @@ function render(){
   if(!cur.fromMkt&&L.kind!=="elo") how.push("Rango típico de error del modelo: ±8 puntos en el 1X2 (en 2.300 partidos pasados, la diferencia con las casas fue menor a eso el 80% de las veces).");
   $("howTxt").innerHTML=how.map(x=>`<p>${esc(x)}</p>`).join("");
   $("inj").innerHTML=L.kind==="elo"?`<div class="none">Champions League: las probabilidades salen del ranking Elo de los clubes (sin córners ni tiros, porque no hay datos comparables entre ligas). No están validadas con partidos pasados.</div>`:injHtml(h,a);
-  renderHist(h,a); renderStats(h,a,fx);
+  renderHist(h,a); renderStats(h,a,fx); renderTable(h,a);
+  const ex=$("expect"); ex.innerHTML=expectHtml(h,a,cur,fin); ex.hidden=!ex.innerHTML;
   // mercados
   let html="",sec="",sub=null;
   cur.rows.forEach((r,i)=>{
@@ -1626,25 +1893,27 @@ function fxList(){
   $("fxNote").textContent=DATA.note||"";
   $("dayChips").hidden=!days.length;
   $("dayChips").innerHTML=days.map(k=>{const p=dparts(k),n=fxOfLeague().filter(f=>f.date.slice(0,10)===k).length;
-    return `<button class="day" type="button" data-d="${k}" aria-pressed="${k===day}"><b>${p.dow} ${p.d} ${p.mon}</b><small>${n} ${n===1?"partido":"partidos"}</small></button>`;}).join("");
+    return `<button class="day" type="button" data-d="${k}" aria-pressed="${k===day}"><b>${p.dow} ${p.d} ${p.mon}</b><small>${fxOfLeague().filter(f=>f.date.slice(0,10)===k).every(f=>f.score)?(n===1?"resultado":"resultados"):n+" "+(n===1?"partido":"partidos")}</small></button>`;}).join("");
   $("fxList").innerHTML=list.length?list.map(f=>{
-    const p=quick(f), q=p?`<span class="mq"><span class="qb"><i style="flex-grow:${p[0].toFixed(3)}"></i><i style="flex-grow:${p[1].toFixed(3)}"></i><i style="flex-grow:${p[2].toFixed(3)}"></i></span><span class="qn"><span>${pct(p[0])}</span><span>${pct(p[1])}</span><span>${pct(p[2])}</span></span></span>`:"<span></span>";
-    return `<button class="mc" type="button" data-f="${DATA.fixtures.indexOf(f)}"><span class="mtime">${esc(f.date.slice(11,16))}</span><span class="mtt"><span>${esc(f.h)}</span><span>${esc(f.a)}</span></span>${q}<span class="chev"></span></button>`;}).join("")
+    const fin=!!f.score, p=fin?null:quick(f), q=fin?`<span class="msc"><b>${f.score[0]}</b><span>–</span><b>${f.score[1]}</b></span>`:p?`<span class="mq"><span class="qb"><i style="flex-grow:${p[0].toFixed(3)}"></i><i style="flex-grow:${p[1].toFixed(3)}"></i><i style="flex-grow:${p[2].toFixed(3)}"></i></span><span class="qn"><span>${pct(p[0])}</span><span>${pct(p[1])}</span><span>${pct(p[2])}</span></span></span>`:"<span></span>";
+    return `<button class="mc${fin?" fin":""}" type="button" data-f="${DATA.fixtures.indexOf(f)}"><span class="mtime">${fin?"FIN":esc(f.date.slice(11,16))}</span><span class="mtt"><span>${esc(f.h)}</span><span>${esc(f.a)}</span></span>${q}<span class="chev"></span></button>`;}).join("")
     :`<div class="empty">No hay partidos próximos de ${esc(DATA.leagues[league].name)} en la fuente de datos. Puedes elegir los equipos abajo.</div>`;
   $("manual").open=!list.length;
 }
 function setView(v){
   if(v!=="match")prevView=v;
   view=v;
-  [["list","vList"],["feat","vFeat"],["log","vLog"],["match","vMatch"]].forEach(([k,id])=>{$(id).hidden=k!==v;});
-  $("ctx").hidden=!(v==="list"||v==="feat");
+  [["list","vList"],["feat","vFeat"],["table","vTable"],["log","vLog"],["match","vMatch"]].forEach(([k,id])=>{$(id).hidden=k!==v;});
+  $("ctx").hidden=!(v==="list"||v==="feat"||v==="table");
+  $("dayChips").hidden=v==="table"||!daysOfLeague().length;
+  if(v==="table")renderTableView();
   document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===(v==="match"?prevView:v)?"page":"false"));
   window.scrollTo(0,0);
 }
 function setTab(t){
   tab=t;
   document.querySelectorAll("#mTabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===t?"true":"false"));
-  [["sum","pSum"],["hist","pHist"],["trend","pTrend"],["mk","pMk"]].forEach(([k,id])=>{$(id).hidden=k!==t;});
+  [["sum","pSum"],["hist","pHist"],["trend","pTrend"],["table","pTable"],["mk","pMk"]].forEach(([k,id])=>{$(id).hidden=k!==t;});
   const mh=document.querySelector(".mhead"), y=mh.getBoundingClientRect().bottom+window.scrollY-8;
   if(window.scrollY>y)window.scrollTo(0,y);
 }
@@ -1662,7 +1931,7 @@ $("feat").addEventListener("click",ev=>{const b=ev.target.closest("button[data-f
 $("dayChips").addEventListener("click",ev=>{const b=ev.target.closest("button[data-d]"); if(!b)return; day=b.dataset.d; fxList(); renderFeat();});
 $("leagueTabs").addEventListener("click",ev=>{
   const k=ev.target.dataset.k; if(!k||k===league)return;
-  league=k; day=null; tabs(); fillTeams(); updTxt(); fxList(); renderFeat();
+  league=k; day=null; tabs(); fillTeams(); updTxt(); fxList(); renderFeat(); if(view==="table")renderTableView();
 });
 $("goManual").addEventListener("click",()=>{
   const h=$("home").value,a=$("away").value;
@@ -1771,7 +2040,7 @@ $("copy").addEventListener("click",()=>{
 });
 
 
-league=(DATA.fixtures&&DATA.fixtures[0]&&DATA.fixtures[0].lg)||Object.keys(DATA.leagues)[0];
+league=((DATA.fixtures||[]).find(f=>!f.score)||(DATA.fixtures||[])[0]||{}).lg||Object.keys(DATA.leagues)[0];
 tabs(); fillTeams(); updTxt(); fxList(); renderFeat(); renderLog(); setView("list");
 </script>
 

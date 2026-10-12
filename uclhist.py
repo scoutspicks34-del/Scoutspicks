@@ -61,7 +61,7 @@ def stage_es(s, pre):
     return s
 
 
-def parse(text, y0, pre=False):
+def parse(text, y0, pre=False, raw=False):
     """Devuelve filas [aaaammdd, local, visitante, goles_local, goles_visitante, fase, nota]."""
     rows, stage, date = [], "", None
     for ln in text.splitlines():
@@ -85,7 +85,7 @@ def parse(text, y0, pre=False):
                     x, y2 = mm.group(1), mm.group(2)
             elif "a.e.t." in rest:
                 note = "prórroga"
-            rows.append([date, clean(h), clean(a), int(x), int(y2), stage, note])
+            rows.append([date, h.strip() if raw else clean(h), a.strip() if raw else clean(a), int(x), int(y2), stage, note])
     return rows
 
 
