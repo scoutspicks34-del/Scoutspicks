@@ -1360,23 +1360,27 @@ function expectHtml(h,a,c,fin){
   if(gl)li.push(`<li><b>Goles:</b> se espera un ${gtype} (~${(c.lh+c.la).toFixed(1)} goles). Línea sugerida: ${gl.pk.lbl} ${pcTag(gl.pk.p)}.${gl.sf?` Más segura: ${gl.sf.lbl} ${pcTag(gl.sf.p)}.`:""}</li>`);
   const bt=c.bt;
   li.push(`<li><b>Ambos anotan:</b> ${bt>=0.65?`es probable que los dos marquen ${pcTag(bt)}`:bt<=0.35?`es probable que uno no marque (Ambos anotan: no ${pcTag(1-bt)})`:`sin ventaja clara (sí ${pct(bt)}, no ${pct(1-bt)})`}.</li>`);
-  const mk=c.mk||{}, one=(k,nm)=>{
+  const mk=c.mk||{}, band=(arr)=>arr.filter(x=>x.p>=0.65&&x.p<=0.85).sort((u,v)=>Math.abs(u.p-0.75)-Math.abs(v.p-0.75))[0]||null;
+  const one=(k,nm,hiTot)=>{              // mejor "más de" y mejor "menos de" entre 65% y 85% (la más cercana a 75%)
     const M=mk[k]; if(!M)return null;
-    const sd=Math.sqrt(M.tot+M.at*M.tot*M.tot), lo=Math.max(0.5,Math.floor(M.tot-2.2*sd)+0.5), hi=Math.floor(M.tot+2.2*sd)+0.5;
-    const L={ov:[],un:[]}; for(let x=lo;x<=hi;x+=1){const p=pOver(x,M.tot,M.at); L.ov.push({lbl:"Más de "+x+" "+nm,p:p,x:x}); L.un.push({lbl:"Menos de "+x+" "+nm,p:1-p,x:x});}
-    const over=pOver(Math.floor(M.tot)+0.5,M.tot,M.at)>=0.5, r=lineTxt(L,over); return r?{M:M,r:r}:null;
+    const sd=Math.sqrt(M.tot+M.at*M.tot*M.tot), lo=Math.max(0.5,Math.floor(M.tot-2.6*sd)+0.5), hi=Math.floor(M.tot+2.6*sd)+0.5;
+    const L={ov:[],un:[]}; for(let x=lo;x<=hi;x+=1){const p=pOver(x,M.tot,M.at); L.ov.push({lbl:"Más de "+x+(nm?" "+nm:""),p:p}); L.un.push({lbl:"Menos de "+x+(nm?" "+nm:""),p:1-p});}
+    let ov=band(L.ov), un=band(L.un);
+    if(!ov&&!un){const f=pickLine(pOver(Math.floor(M.tot)+0.5,M.tot,M.at)>=0.5?L.ov:L.un); if(!f)return null; if(f.lbl[0]==="M"&&f.lbl[1]==="á")ov=f; else un=f;}
+    const high=M.tot>=hiTot, overFirst=high||pOver(Math.floor(M.tot)+0.5,M.tot,M.at)>=0.5;
+    const list=(overFirst?[ov,un]:[un,ov]).filter(Boolean);
+    return {M:M,list:list,txt:list.map(z=>`${z.lbl} ${pcTag(z.p)}`).join(" · "),high:high};
   };
-  const co=one("corners","córners");
-  if(co)li.push(`<li><b>Córners:</b> se proyectan ~${co.M.tot.toFixed(1)} córners en total. Línea sugerida: ${co.r.pk.lbl} ${pcTag(co.r.pk.p)}.${co.r.sf?` Más segura: ${co.r.sf.lbl} ${pcTag(co.r.sf.p)}.`:""}</li>`);
-  const sh=one("shots","tiros totales"), so=one("sot","tiros a puerta");
+  const co=one("corners","córners",9.5);
+  if(co)li.push(`<li><b>Córners:</b> se proyectan ~${co.M.tot.toFixed(1)} córners en total. Línea${co.list.length>1?"s":""} sugerida${co.list.length>1?"s":""}: ${co.txt}.</li>`);
+  const sh=one("shots","",25), so=one("sot","",sh?(sh.high?0:1e9):8.5);
   if(sh||so){
     const parts=[]; if(sh)parts.push(`~${sh.M.tot.toFixed(0)} tiros totales`); if(so)parts.push(`~${so.M.tot.toFixed(0)} a puerta`);
-    const sug=[sh,so].filter(Boolean).map(z=>`${z.r.pk.lbl} ${pcTag(z.r.pk.p)}`);
-    li.push(`<li><b>Tiros:</b> se esperan ${parts.join(" y ")}. Línea${sug.length>1?"s":""} sugerida${sug.length>1?"s":""}: ${sug.join(" · ")}.</li>`);
+    li.push(`<li><b>Tiros:</b> se esperan ${parts.join(" y ")}.${sh?` Tiros totales: ${sh.txt}.`:""}${so?` A puerta: ${so.txt}.`:""}</li>`);
   }
   return `<div class="exptit">📌 Resumen de tendencias para este partido</div>
     <ul class="exp">${li.join("")}</ul>
-    <div class="sub" style="margin-top:12px">Las líneas sugeridas son las que el modelo ubica entre 65% y 75% de probabilidad; si ninguna cae en ese rango, la más cercana por encima. Son probabilidades, no garantías. ${c.mk&&Object.keys(c.mk).length?"De córners y tiros no tenemos cuotas para saber si pagan bien.":""}</div>`;
+    <div class="sub" style="margin-top:12px">En goles, la línea sugerida es la que el modelo ubica entre 65% y 75% (si ninguna cae ahí, la más cercana por encima). En córners y tiros muestro la mejor línea de \"más de\" y de \"menos de\" entre 65% y 85%, la más cercana a 75%; si el partido promete muchos córners (9.5 o más) o tiros (25 o más), va primero la de \"más de\". Son probabilidades, no garantías. ${c.mk&&Object.keys(c.mk).length?"De córners y tiros no tenemos cuotas para saber si pagan bien.":""}</div>`;
 }
 
 /* ---------- clasificación ---------- */
