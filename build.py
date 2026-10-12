@@ -260,6 +260,31 @@ def manual_frames(code):
     return [m] if len(m) else []
 
 
+def fill_missing(key, df, rows):
+    """rows: [(aaaammdd, local, visitante, goles_local, goles_visitante, ...)]. Devuelve un DataFrame con los partidos que
+    no están en df (mismo local y visitante a menos de 3 días), con los nombres ya convertidos a los de football-data."""
+    cur = df[df.season == df.season.max()]
+    teams = set(cur.HomeTeam) | set(cur.AwayTeam)
+    have = {}
+    for d, h, a in zip(cur.Date, cur.HomeTeam, cur.AwayTeam):
+        have.setdefault((h, a), []).append(d)
+    out, bad, seen = [], set(), set()
+    for r in rows:
+        d, h, a, x, y2 = r[:5]
+        mh, ma = match_team(h, teams), match_team(a, teams)
+        if not mh or not ma or mh == ma:
+            bad.add(h if not mh else a)
+            continue
+        dd = pd.to_datetime(str(d))
+        if any(abs((dd - e).days) <= 3 for e in have.get((mh, ma), [])) or (mh, ma) in seen:
+            continue
+        seen.add((mh, ma))
+        out.append({"Date": dd, "HomeTeam": mh, "AwayTeam": ma, "FTHG": int(x), "FTAG": int(y2)})
+    if bad:
+        log(f"  {key}: sin equivalencia de nombre: {', '.join(sorted(bad))}")
+    return pd.DataFrame(out) if out else None
+
+
 def of_extra(key, df, today, text=None):
     """Partidos que faltan en football-data y sí están en openfootball (solo goles). Devuelve un DataFrame o None."""
     if key not in OF_FILES:
@@ -277,26 +302,111 @@ def of_extra(key, df, today, text=None):
                 log(f"  openfootball {repo} {br}: {str(e)[:100]}")
         if text is None:
             return None
-    cur = df[df.season == df.season.max()]
-    teams = set(cur.HomeTeam) | set(cur.AwayTeam)
-    have = {}
-    for d, h, a in zip(cur.Date, cur.HomeTeam, cur.AwayTeam):
-        have.setdefault((h, a), []).append(d)
-    out, bad = [], set()
-    for d, h, a, x, y2, _, _ in uclhist.parse(text, y, raw=True):
-        mh, ma = match_team(h, teams), match_team(a, teams)
-        if not mh or not ma or mh == ma:
-            bad.add(h if not mh else a)
+    ex = fill_missing(key, df, uclhist.parse(text, y, raw=True))
+    if ex is not None:
+        EXTRA_N["openfootball"] = EXTRA_N.get("openfootball", 0) + len(ex)
+        log(f"  openfootball {key}: {len(ex)} partidos que faltaban (solo goles)")
+    return ex
+
+
+# Fuentes gratuitas que publican el marcador el mismo día (solo goles); football-data.co.uk trae después las estadísticas completas.
+EXTRA_N, EXTRA_ERR = {}, []
+ESPN_LG = {"bundesliga": "ger.1", "premier": "eng.1", "laliga": "esp.1", "ucl": "uefa.champions"}
+OLDB_LG = {"bundesliga": "bl1"}
+FDORG_LG = {"bundesliga": "BL1", "premier": "PL", "laliga": "PD", "ucl": "CL"}
+UCL_STAGE = {"league-phase": "Fase de liga", "playoffs": "Play-offs", "knockout-round-playoffs": "Play-offs",
+             "round-of-16": "Octavos", "quarterfinals": "Cuartos", "semifinals": "Semifinales", "final": "Final"}
+UCL_ALIAS = {"sporting cp": "Sporting Lisbon", "inter": "Inter Milan", "internazionale": "Inter Milan", "fc copenhagen": "København",
+             "red bull salzburg": "Salzburg", "qarabag": "Qarabağ", "union st gilloise": "Union Saint-Gilloise",
+             "bayer leverkusen": "Bayer Leverkusen", "atletico madrid": "Atlético Madrid", "psv": "PSV Eindhoven",
+             "bodo glimt": "Bodø/Glimt", "fk bodo glimt": "Bodø/Glimt", "paris saint germain": "Paris Saint-Germain"}
+
+
+def _ymd(iso):
+    return int(str(iso)[:10].replace("-", ""))
+
+
+def parse_espn(js):
+    """Marcadores finales del scoreboard público de ESPN (no oficial)."""
+    out = []
+    for ev in (js or {}).get("events", []) or []:
+        comp = (ev.get("competitions") or [{}])[0]
+        st = ((comp.get("status") or ev.get("status") or {}).get("type") or {})
+        if not st.get("completed"):
             continue
-        dd = pd.to_datetime(str(d))
-        if any(abs((dd - e).days) <= 3 for e in have.get((mh, ma), [])):
+        cs = comp.get("competitors") or []
+        H = [c for c in cs if c.get("homeAway") == "home"]
+        A = [c for c in cs if c.get("homeAway") == "away"]
+        if not H or not A:
             continue
-        out.append({"Date": dd, "HomeTeam": mh, "AwayTeam": ma, "FTHG": x, "FTAG": y2})
-    if bad:
-        log(f"  openfootball {key}: sin equivalencia de nombre: {', '.join(sorted(bad))}")
-    if out:
-        log(f"  openfootball {key}: {len(out)} partidos que faltaban (solo goles)")
-    return pd.DataFrame(out) if out else None
+        try:
+            hg, ag = int(float(H[0].get("score"))), int(float(A[0].get("score")))
+        except (TypeError, ValueError):
+            continue
+        nm = lambda c: (c.get("team") or {}).get("displayName") or (c.get("team") or {}).get("name") or ""
+        slug = ((ev.get("season") or {}).get("slug") or "")
+        out.append((_ymd(ev.get("date", "")), nm(H[0]), nm(A[0]), hg, ag, UCL_STAGE.get(slug, "Fase de liga")))
+    return out
+
+
+def parse_openliga(js):
+    """Marcadores finales de OpenLigaDB (Bundesliga). resultTypeID 2 = resultado final."""
+    out = []
+    for m in js or []:
+        if not m.get("matchIsFinished"):
+            continue
+        res = [r for r in (m.get("matchResults") or []) if r.get("resultTypeID") == 2] or \
+              sorted(m.get("matchResults") or [], key=lambda r: r.get("resultOrderID", 0))[-1:]
+        if not res:
+            continue
+        out.append((_ymd(m.get("matchDateTimeUTC") or m.get("matchDateTime") or ""), (m.get("team1") or {}).get("teamName", ""),
+                    (m.get("team2") or {}).get("teamName", ""), int(res[0]["pointsTeam1"]), int(res[0]["pointsTeam2"]), ""))
+    return out
+
+
+def parse_fdorg(js):
+    """Marcadores finales de football-data.org v4 (necesita clave gratuita)."""
+    out = []
+    for m in (js or {}).get("matches", []) or []:
+        if m.get("status") != "FINISHED":
+            continue
+        ft = ((m.get("score") or {}).get("fullTime") or {})
+        if ft.get("home") is None or ft.get("away") is None:
+            continue
+        out.append((_ymd(m.get("utcDate", "")), (m.get("homeTeam") or {}).get("name", ""), (m.get("awayTeam") or {}).get("name", ""),
+                    int(ft["home"]), int(ft["away"]), ""))
+    return out
+
+
+def _get_json(label, url, headers=None):
+    try:
+        r = requests.get(url, timeout=30, headers=headers or {"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:  # noqa: BLE001
+        log(f"  {label}: {str(e)[:120]}")
+        if label not in EXTRA_ERR:
+            EXTRA_ERR.append(label)
+        return None
+
+
+def live_rows(key, since, today):
+    """[(fuente, filas)] con los partidos terminados entre `since` y hoy, de cada fuente gratuita disponible."""
+    out, d0, d1 = [], int(since.strftime("%Y%m%d")), int(today.strftime("%Y%m%d"))
+    y = today.year if today.month >= 7 else today.year - 1
+    inr = lambda rows: [r for r in rows if d0 <= r[0] <= d1 + 1]
+    k = os.environ.get("FOOTBALL_DATA_ORG_KEY", "").strip()
+    if k and key in FDORG_LG:
+        js = _get_json("football-data.org", f"https://api.football-data.org/v4/competitions/{FDORG_LG[key]}/matches?status=FINISHED"
+                       f"&dateFrom={since:%Y-%m-%d}&dateTo={today + dt.timedelta(days=1):%Y-%m-%d}", {"X-Auth-Token": k})
+        out.append(("football-data.org", inr(parse_fdorg(js))))
+    if key in OLDB_LG:
+        js = _get_json("OpenLigaDB", f"https://api.openligadb.de/getmatchdata/{OLDB_LG[key]}/{y}")
+        out.append(("OpenLigaDB", inr(parse_openliga(js))))
+    if key in ESPN_LG:
+        js = _get_json("ESPN", f"https://site.api.espn.com/apis/site/v2/sports/soccer/{ESPN_LG[key]}/scoreboard?dates={d0}-{d1}&limit=300")
+        out.append(("ESPN", inr(parse_espn(js))))
+    return out
 
 
 def add_extra(df, extra):
@@ -672,7 +782,7 @@ DOM2UCL = {"Man City": "Manchester City", "Man United": "Manchester United", "At
            "Ath Bilbao": "Athletic Club", "Betis": "Real Betis", "Newcastle": "Newcastle United", "Paris SG": "Paris Saint-Germain"}
 
 
-def load_uclh():
+def load_uclh(today=None):
     """Partidos de Champions: 2024/25 y 2025/26 (data/ucl_hist.json) + temporada en curso."""
     rows = []
     try:
@@ -689,6 +799,23 @@ def load_uclh():
                 log(f"  Champions 2026/27 desde openfootball: {len(got)} partidos")
     except Exception:  # noqa: BLE001
         pass
+    if today is not None:   # marcadores de Champions del mismo día (ESPN / football-data.org), solo goles
+        last = max([r[0] for r in rows + new] or [20260701])
+        since = dt.date(last // 10000, last // 100 % 100, last % 100) - dt.timedelta(days=1)
+        known = set(UCL_TEAMS) | {r[1] for r in rows + new} | {r[2] for r in rows + new}
+        for label, got in live_rows("ucl", since, today):
+            add = 0
+            for d, h, a, x, y2, st in got:
+                hh = UCL_ALIAS.get(norm(h)) or match_team(h, known) or uclhist.clean(h)
+                aa = UCL_ALIAS.get(norm(a)) or match_team(a, known) or uclhist.clean(a)
+                dd = pd.to_datetime(str(d))
+                if hh == aa or any((r[1], r[2]) == (hh, aa) and abs((pd.to_datetime(str(r[0])) - dd).days) <= 3 for r in rows + new):
+                    continue
+                new.append([d, hh, aa, x, y2, st or "Fase de liga", ""])
+                add += 1
+            if add:
+                EXTRA_N[label + " (Champions)"] = EXTRA_N.get(label + " (Champions)", 0) + add
+                log(f"  {label} Champions: {add} partidos que faltaban (solo goles)")
     seen, out = set(), []
     for r in rows + new:
         k = (r[0], r[1], r[2])
@@ -721,6 +848,12 @@ def build(template, out_path="docs/index.html"):
         try:
             df = prepare(manual_frames(v["code"]) + fetch_frames(v["code"], seasons))
             df = add_extra(df, of_extra(key, df, today))
+            for label, rows in live_rows(key, (df.Date.max() - pd.Timedelta(days=3)).date(), today):
+                ex = fill_missing(key, df, rows)
+                if ex is not None:
+                    EXTRA_N[label] = EXTRA_N.get(label, 0) + len(ex)
+                    log(f"  {label} {key}: {len(ex)} partidos que faltaban (solo goles)")
+                    df = add_extra(df, ex)
             ref = df.Date.max() + pd.Timedelta(days=1)
             params[key] = league_params(df, ref)
             params[key]["name"] = v["name"]
@@ -744,9 +877,13 @@ def build(template, out_path="docs/index.html"):
             ml = market_lambdas(f["odds"], st)
             if ml:
                 f["ml"] = ml
-    uclh = load_uclh()
+    uclh = load_uclh(today)
     done = recent_results(params, uclh, today)
     seen = {(d["lg"], d["h"], d["a"]) for d in done}
+    if EXTRA_N:
+        note += " Marcadores al día con " + ", ".join(f"{k} (+{n})" for k, n in EXTRA_N.items()) + " (solo goles; córners y tiros llegan con football-data.co.uk)."
+    if EXTRA_ERR:
+        note += " Sin respuesta: " + ", ".join(EXTRA_ERR) + "."
     fixtures = sorted([f for f in fixtures if (f["lg"], f["h"], f["a"]) not in seen] + ucl_fixtures(params, today) + done, key=lambda x: x["date"])
     if "ucl" not in params:
         det = [l.strip() for l in LOG if "clubelo" in l or "Elo" in l]
@@ -1721,8 +1858,9 @@ function evRows(h,a,test,o){
   const nm2=[ph?h:"",pa?a:""].filter(Boolean).join(" y ");
   add([ph?domMatches(rh,10,"all").map(nrm):[],pa?domMatches(ra,10,"all").map(nrm):[]],"últimos 10 de "+nm2+", local y visita");
   if(o.h2h!==false)add([h2hRaw(h,a,5).map(r=>nrm(o.flip?Object.assign({},r,{home:!r.home}):r))],"enfrentamientos directos (últimos 5)");
-  const ch=uclName(h), ca=uclName(a), uh=o.h!==false&&ch, ua=o.a!==false&&ca;
-  add([uh?uclMatches(ch,5).map(nrm):[],ua?uclMatches(ca,5).map(nrm):[]],"en Champions: últimos 5 de "+[uh?h:"",ua?a:""].filter(Boolean).join(" y "));
+  const ch=uclName(h), ca=uclName(a), mh=o.h!==false&&ch?uclMatches(ch,5).map(nrm):[], ma=o.a!==false&&ca?uclMatches(ca,5).map(nrm):[];
+  const who=[mh.length?h+(mh.length<5?" ("+mh.length+")":""):"",ma.length?a+(ma.length<5?" ("+ma.length+")":""):""].filter(Boolean).join(" y ");
+  if(who)add([mh,ma],"en Champions: últimos 5 de "+who);   // solo cuenta a los equipos que sí tienen partidos; sin ninguno, la fila no aparece
   return rows;
 }
 function evCard(title,rows,note){
