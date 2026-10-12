@@ -13,6 +13,8 @@ LEAGUES = {
     "premier": dict(name="Premier League", code="E0", api=39),
     "laliga": dict(name="La Liga", code="SP1", api=140),
 }
+BT_W = 0.5   # peso del modelo en "ambos anotan" (el resto va a la tasa histórica de la liga); ver prueba con partidos pasados
+REG_M = {"shots": 80.0}   # regularización por mercado (por defecto 40); tiros totales mejoró con 80 en la prueba con partidos pasados
 MARKETS = {"corners": ("HC", "AC"), "sot": ("HST", "AST"), "shots": ("HS", "AS")}
 KEEP = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "HS", "AS", "HST", "AST", "HC", "AC", "HY", "AY", "HR", "AR"]
 API = "https://v3.football.api-sports.io"
@@ -135,10 +137,13 @@ def fit_model(train, ref_date, half_life, reg, hcol, acol):
 
 def league_params(df, ref):
     models = {"goles": fit_model(df, ref, 365, 4.0, "FTHG", "FTAG")}
-    log(f"  Dixon-Coles rho = {models['goles']['rho']}")
+    rec = df[df.Date >= ref - pd.Timedelta(days=730)]   # tasa histórica de "ambos anotan" (últimos 2 años) para encoger esa probabilidad
+    models["goles"]["btb"] = round(float(((rec.FTHG > 0) & (rec.FTAG > 0)).mean()), 3)
+    models["goles"]["btw"] = BT_W
+    log(f"  Dixon-Coles rho = {models['goles']['rho']} | ambos anotan base = {models['goles']['btb']}")
     for k, (h, a) in MARKETS.items():
         if h in df.columns and a in df.columns:
-            models[k] = fit_model(df, ref, 365, 40.0, h, a)
+            models[k] = fit_model(df, ref, 365, REG_M.get(k, 40.0), h, a)
     last = df[df.season == df.season.max()]
     teams = sorted(set(last.HomeTeam) | set(last.AwayTeam))
     form = {}
@@ -1142,6 +1147,7 @@ function compute(h, a, fh, fa, ml){
     if(i+j>=2)o15+=v; if(i+j>=3)o25+=v; if(i+j>=4)o35+=v; if(i>=1&&j>=1)bt+=v;
   }
   if(ml){ bt=1/(1+Math.exp(-(Math.log(bt/(1-bt))+0.14))); }   // en pruebas, "ambos anotan" sale ~3 pts más alto de lo que da Poisson
+  if(!ml && L.kind!=="elo" && L.models.goles.btb){ bt=L.models.goles.btw*bt+(1-L.models.goles.btw)*L.models.goles.btb; }   // el modelo solo exagera las diferencias entre partidos en "ambos anotan"
   out.lh=lh; out.la=la; out.p=[pH,pD,pA]; out.o25=o25; out.bt=bt; out.fromMkt=!!ml;
   const R=(sec,label,p,key,fav)=>out.rows.push({sec,label,p,key,fav});
   R("Resultado",h+" gana",pH,"1",true); R("Resultado","Empate",pD,"X"); R("Resultado",a+" gana",pA,"2",true);
@@ -1578,6 +1584,7 @@ function render(){
   else how.push("Estas probabilidades son del modelo estadístico (goles de las últimas temporadas). Sin cuotas de las casas no hay con qué compararlas.");
   if(cur.fromMkt&&cur.src!=="user") how.push("Resultado, goles, más o menos y ambos anotan están calculados a partir de las cuotas de las casas; en las pruebas salieron más precisos que los del modelo. Córners y tiros siguen siendo del modelo.");
   if(cur.src==="user") how.push("Como las probabilidades salen de tu casa, la ganancia esperada de esas filas solo refleja su margen. Córners y tiros siguen siendo del modelo.");
+  if(!cur.fromMkt&&L.kind!=="elo"&&L.models.goles.btb) how.push("\"Ambos anotan\" se acerca a lo que pasó en esta liga en los últimos 2 años ("+Math.round(L.models.goles.btb*100)+"%). Con partidos pasados vimos que el modelo solo exageraba las diferencias entre partidos en este mercado.");
   if(!cur.fromMkt&&L.kind!=="elo") how.push("Rango típico de error del modelo: ±8 puntos en el 1X2 (en 2.300 partidos pasados, la diferencia con las casas fue menor a eso el 80% de las veces).");
   $("howTxt").innerHTML=how.map(x=>`<p>${esc(x)}</p>`).join("");
   $("inj").innerHTML=L.kind==="elo"?`<div class="none">Champions League: las probabilidades salen del ranking Elo de los clubes (sin córners ni tiros, porque no hay datos comparables entre ligas). No están validadas con partidos pasados.</div>`:injHtml(h,a);
