@@ -401,7 +401,7 @@ STATIC_ELO = {
     "Lens": 1817, "Club Brugge": 1812, "Como": 1807, "Galatasaray": 1798, "Villarreal": 1796,
     "PSV Eindhoven": 1787, "Fenerbahçe": 1785,
     "Lille": 1783, "Bodø/Glimt": 1780, "Slavia Prague": 1764, "Feyenoord": 1724, "AEK Athens": 1708,
-    "Viking": 1700, "Shakhtar Donetsk": 1692,
+    "Viking": 1700, "Shakhtar Donetsk": 1692, "LASK Linz": 1628, "Sabah": 1561, "Slovan Bratislava": 1551,
 }
 
 
@@ -500,7 +500,8 @@ def build(template, out_path="docs/index.html"):
         det = [l.strip() for l in LOG if "clubelo" in l or "Elo" in l]
         note += " (Champions: no se pudo leer clubelo.com. " + (det[-1][:260] if det else "sin detalle") + ")"
     if "ucl" in params and params["ucl"]["updated"] == STATIC_ELO_DATE != today.isoformat():
-        note += f" Champions: Elo guardado del {STATIC_ELO_DATE} (clubelo.com no responde); faltan " + ", ".join(t for t in UCL_TEAMS if t not in params["ucl"]["elo"]) + "."
+        falta = [t for t in UCL_TEAMS if t not in params["ucl"]["elo"]]
+        note += f" Champions: Elo guardado del {STATIC_ELO_DATE}." + (" Faltan: " + ", ".join(falta) + "." if falta else "")
     log(note)
     data = {"leagues": params, "fixtures": fixtures, "note": note,
             "generated": local.strftime("%Y-%m-%d %H:%M") + " (hora de Honduras)"}
