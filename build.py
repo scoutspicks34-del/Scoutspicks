@@ -70,6 +70,23 @@ def _disp(y, mu):
     return max(float(np.sum((y - mu) ** 2 - mu) / np.sum(mu ** 2)), 1e-4)
 
 
+def rho_dc(gh, ga, lh, la, w):
+    """Parámetro de Dixon-Coles (marcadores 0-0, 1-0, 0-1, 1-1) por máxima verosimilitud, con los mismos pesos por antigüedad."""
+    best, top = 0.0, -1e18
+    for rho in np.arange(-0.25, 0.1001, 0.005):
+        t = np.ones_like(lh)
+        t = np.where((gh == 0) & (ga == 0), 1 - lh * la * rho, t)
+        t = np.where((gh == 0) & (ga == 1), 1 + lh * rho, t)
+        t = np.where((gh == 1) & (ga == 0), 1 + la * rho, t)
+        t = np.where((gh == 1) & (ga == 1), 1 - rho, t)
+        if np.any(t <= 0):
+            continue
+        v = float(np.sum(w * np.log(t)))
+        if v > top:
+            best, top = float(rho), v
+    return round(best, 3)
+
+
 def fit_model(train, ref_date, half_life, reg, hcol, acol):
     train = train.dropna(subset=[hcol, acol])
     teams = sorted(set(train.HomeTeam) | set(train.AwayTeam))
@@ -106,7 +123,9 @@ def fit_model(train, ref_date, half_life, reg, hcol, acol):
     att, de = x[2:2 + n], x[2 + n:]
     lh = np.exp(x[0] + x[1] + att[h] - de[a])
     la = np.exp(x[0] + att[a] - de[h])
+    out_rho = {"rho": rho_dc(gh, ga, lh, la, w)} if hcol == "FTHG" else {}
     return {
+        **out_rho,
         "mu": float(x[0]), "home": float(x[1]),
         "ah": _disp(gh, lh), "aa": _disp(ga, la), "at": _disp(gh + ga, lh + la),
         "att": {t: round(float(att[i]), 4) for i, t in enumerate(teams)},
@@ -116,6 +135,7 @@ def fit_model(train, ref_date, half_life, reg, hcol, acol):
 
 def league_params(df, ref):
     models = {"goles": fit_model(df, ref, 365, 4.0, "FTHG", "FTAG")}
+    log(f"  Dixon-Coles rho = {models['goles']['rho']}")
     for k, (h, a) in MARKETS.items():
         if h in df.columns and a in df.columns:
             models[k] = fit_model(df, ref, 365, 40.0, h, a)
@@ -827,6 +847,8 @@ details[open]>summary::after{transform:rotate(-135deg)}
 .chart .vl{fill:var(--ink);font:700 10px var(--body)}
 .chart .gl{stroke:var(--line);stroke-width:1}
 .chart .bar.y{fill:var(--good)} .chart .bar.n{fill:var(--bad)}
+.chart .bkt{fill:var(--ink);font:700 10px var(--body)}
+.bkn{margin-top:8px;line-height:1.4}.bkn b{color:var(--ink)}
 .chart .ln{stroke:var(--vis);stroke-width:1.8;stroke-dasharray:5 4}
 .sq.big{margin-top:12px} .sq.big i{height:26px;border-radius:5px}
 .rl{display:flex;gap:4px;flex-wrap:wrap;margin-top:12px}
@@ -1070,9 +1092,14 @@ const KEY = "scoutpicks.log.v1";
 
 /* ---------- matemática del modelo ---------- */
 function pois(l, n){const a=[Math.exp(-l)];for(let k=1;k<=n;k++)a.push(a[k-1]*l/k);return a;}
-function scoreMatrix(lh, la){
+function scoreMatrix(lh, la, rho){          // rho: corrección de Dixon-Coles para 0-0, 1-0, 0-1 y 1-1 (0 = Poisson independiente)
   const N=10, ph=pois(lh,N), pa=pois(la,N); let s=0; const m=[];
   for(let i=0;i<=N;i++){m.push([]);for(let j=0;j<=N;j++){const v=ph[i]*pa[j];m[i].push(v);s+=v;}}
+  if(rho){
+    m[0][0]*=Math.max(0,1-lh*la*rho); m[0][1]*=Math.max(0,1+lh*rho);
+    m[1][0]*=Math.max(0,1+la*rho);    m[1][1]*=Math.max(0,1-rho);
+    s=0; m.forEach(r=>r.forEach(v=>{s+=v;}));
+  }
   return m.map(r=>r.map(v=>v/s));
 }
 function lam(M, h, a){
@@ -1107,7 +1134,8 @@ function compute(h, a, fh, fa, ml){
   if(ml){ l0=ml; }
   else if(L.kind==="elo"){ const E=1/(1+Math.pow(10,-((L.elo[h]+L.hfa-L.elo[a])/400))); l0=eloLam(E,L.T); }
   else { l0=lam(L.models.goles,h,a); }
-  const lh = l0[0]*fh, la = l0[1]*fa, m = scoreMatrix(lh,la);
+  const rho = (!ml && L.kind!=="elo" && L.models.goles.rho) || 0;   // con cuotas o Elo no se aplica: esos goles esperados ya vienen de otro cálculo
+  const lh = l0[0]*fh, la = l0[1]*fa, m = scoreMatrix(lh,la,rho);
   let pH=0,pD=0,pA=0,o15=0,o25=0,o35=0,bt=0;
   for(let i=0;i<m.length;i++)for(let j=0;j<m.length;j++){
     const v=m[i][j]; if(i>j)pH+=v; else if(i===j)pD+=v; else pA+=v;
@@ -1333,13 +1361,19 @@ const MET={
 const METCH=[["goals","Goles"],["cor","Córners"],["crd","Tarjetas"],["btts","Ambos anotan"],["res","Resultado"]];
 function nrm(m){
   const f=m.home?m.hg:m.ag, c=m.home?m.ag:m.hg, hc=m.hc>=0&&m.ac>=0, hk=m.kh>=0&&m.ka>=0;
-  return {f:f,c:c,tot:f+c,cor:hc?m.hc+m.ac:null,cf:hc?(m.home?m.hc:m.ac):null,
-    crd:hk?m.kh+m.ka:null,kf:hk?(m.home?m.kh:m.ka):null,d:m.d,rival:m.home?m.a:m.h,home:m.home};
+  const cf=hc?(m.home?m.hc:m.ac):null, kf=hk?(m.home?m.kh:m.ka):null;
+  return {f:f,c:c,tot:f+c,cor:hc?m.hc+m.ac:null,cf:cf,cc:hc?m.hc+m.ac-cf:null,
+    crd:hk?m.kh+m.ka:null,kf:kf,kc:hk?m.kh+m.ka-kf:null,d:m.d,rival:m.home?m.a:m.h,home:m.home};
 }
 function vfn(k,w){
   if(k==="goals")return w==="tot"?(m=>m.tot):(m=>m.f);
   if(k==="cor")return w==="tot"?(m=>m.cor):(m=>m.cf);
   return w==="tot"?(m=>m.crd):(m=>m.kf);
+}
+function bkfn(k){   // desglose [a favor, en contra] de cada partido
+  if(k==="goals")return m=>[m.f,m.c];
+  if(k==="cor")return m=>m.cf===null?null:[m.cf,m.cc];
+  return m=>m.kf===null?null:[m.kf,m.kc];
 }
 function medianOf(a){const s=a.slice().sort((x,y)=>x-y), i=Math.floor(s.length/2);return s.length%2?s[i]:(s[i-1]+s[i])/2;}
 function lineOf(){const c=MET[met], k=met+who; return lineSel[k]!==undefined?lineSel[k]:(who==="tot"?c.td:c.ed);}
@@ -1348,8 +1382,8 @@ function pcls(p){return p>=0.7?"g":p>=0.5?"m":"b";}
 function scLbl(){return {all:"Todos los partidos",home:"De local",away:"De visita",ucl:"Champions"}[scope];}
 function code3(t){return t.replace(/[^A-Za-zÀ-ÿ]/g,"").slice(0,3).toUpperCase();}
 function dm(n){return String(n%100).padStart(2,"0")+"/"+String(Math.floor(n/100)%100).padStart(2,"0");}
-function chartSvg(ms,vf,line){
-  const n=ms.length, W=340, H=n<=10?196:176, pl=22, pr=4, pt=16, pb=n<=10?40:36;
+function chartSvg(ms,vf,line,bf){
+  const n=ms.length, W=340, H=n<=10?212:176, pl=22, pr=4, pt=16, pb=n<=10?56:36;
   const vals=ms.map(vf), nums=vals.filter(v=>v!==null);
   const top=Math.max(2,Math.ceil(Math.max(line+0.5,...nums,1))), step=top>8?2:1;
   const iy=v=>H-pb-(v/top)*(H-pb-pt), bw=(W-pl-pr)/n, bd=Math.min(bw*0.64,26);
@@ -1357,23 +1391,25 @@ function chartSvg(ms,vf,line){
   for(let t=0;t<=top;t+=step)g+=`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${iy(t).toFixed(1)}" y2="${iy(t).toFixed(1)}"/><text class="ax" x="${pl-5}" y="${(iy(t)+3).toFixed(1)}" text-anchor="end">${t}</text>`;
   ms.forEach((m,i)=>{
     const v=vals[i], cx=pl+bw*(i+0.5);
+    const bk=bf?bf(m):null, tip=bk?`${esc(m.rival)} ${dm(m.d)}: ${m.home?"local":"visita"}, ${bk[0]} a favor – ${bk[1]} en contra`:"";
     if(v!==null){const h=Math.max(v/top*(H-pb-pt),3);
-      g+=`<rect class="bar ${hitV(v,line)?"y":"n"}" x="${(cx-bd/2).toFixed(1)}" y="${(H-pb-h).toFixed(1)}" width="${bd.toFixed(1)}" height="${h.toFixed(1)}" rx="3"/>`;
+      g+=`<rect class="bar ${hitV(v,line)?"y":"n"}" x="${(cx-bd/2).toFixed(1)}" y="${(H-pb-h).toFixed(1)}" width="${bd.toFixed(1)}" height="${h.toFixed(1)}" rx="3"><title>${tip}</title></rect>`;
       if(n<=10)g+=`<text class="vl" x="${cx.toFixed(1)}" y="${(H-pb-h-4).toFixed(1)}" text-anchor="middle">${v}</text>`;}
     else g+=`<text class="ax" x="${cx.toFixed(1)}" y="${H-pb-4}" text-anchor="middle">–</text>`;
-    if(n<=10)g+=`<text class="ax" x="${cx.toFixed(1)}" y="${H-pb+14}" text-anchor="middle" style="font-weight:700">${esc(code3(m.rival))}</text><text class="ax dd" x="${cx.toFixed(1)}" y="${H-pb+26}" text-anchor="middle">${dm(m.d)}</text>`;
+    if(n<=10)g+=`<text class="ax" x="${cx.toFixed(1)}" y="${H-pb+14}" text-anchor="middle" style="font-weight:700">${esc(code3(m.rival))}</text><text class="ax dd" x="${cx.toFixed(1)}" y="${H-pb+26}" text-anchor="middle">${dm(m.d)}</text>${bk?`<text class="bkt" x="${cx.toFixed(1)}" y="${H-pb+40}" text-anchor="middle">${bk[0]}-${bk[1]}</text>`:""}`;
     else g+=`<text class="ax dd" transform="translate(${(cx+3).toFixed(1)} ${H-pb+6}) rotate(-90)" text-anchor="end">${dm(m.d)}</text>`;
   });
   g+=`<line class="ln" x1="${pl}" x2="${W-pr}" y1="${iy(line).toFixed(1)}" y2="${iy(line).toFixed(1)}"/>`;
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Valor de cada partido, con la línea de ${line}">${g}</svg>`;
 }
 function ccHead(team,s){return `<div class="cch"><b>${esc(team)}</b><span>${s.ok?(s.ms.length>1?"Últimos "+s.ms.length:"Último partido")+" · "+scLbl():scLbl()}</span></div>`;}
-function chartCard(team,s,vf,line){
+function chartCard(team,s,vf,line,bf){
   if(!s.ok)return `<div class="cc">${ccHead(team,s)}<div class="empty">${esc(s.msg)}</div></div>`;
   const ms=s.ms.slice().reverse().map(nrm), vs=ms.map(vf).filter(v=>v!==null);
   if(!vs.length)return `<div class="cc">${ccHead(team,s)}<div class="empty">No hay datos de esta estadística para este equipo en estos partidos.</div></div>`;
   const hits=vs.filter(v=>hitV(v,line)).length, avg=(vs.reduce((x,y)=>x+y,0)/vs.length).toFixed(1);
-  return `<div class="cc">${ccHead(team,s)}<div class="ccs"><span>Tasa de acierto <b class="${pcls(hits/vs.length)}">${Math.round(100*hits/vs.length)}%</b></span><span>Promedio <b>${avg}</b></span><span>Mediana <b>${medianOf(vs)}</b></span></div>${chartSvg(ms,vf,line)}</div>`;
+  const bks=bf?ms.map(bf).filter(Boolean):[], av=i=>(bks.reduce((x,y)=>x+y[i],0)/bks.length).toFixed(1);
+  return `<div class="cc">${ccHead(team,s)}<div class="ccs"><span>Tasa de acierto <b class="${pcls(hits/vs.length)}">${Math.round(100*hits/vs.length)}%</b></span><span>Promedio <b>${avg}</b></span><span>Mediana <b>${medianOf(vs)}</b></span></div>${chartSvg(ms,vf,line,bf)}${bks.length?`<div class="sub bkn">Promedio a favor – en contra: <b>${av(0)} – ${av(1)}</b>. ${ms.length<=10?"Bajo cada barra: lo que anotó el equipo – lo que recibió. ":"Toca una barra para ver lo que anotó el equipo y lo que recibió. "}Si el equipo casi no anota y la barra es alta, pasó la línea por lo que recibió.</div>`:""}</div>`;
 }
 function sqGen(arr){return `<div class="sq big" style="grid-template-columns:repeat(${arr.length},1fr)">${arr.map(v=>`<i class="${v===null?"":v?"y":"n"}"></i>`).join("")}</div>`;}
 function boolCard(team,s,test,lbl){
@@ -1432,7 +1468,8 @@ function renderStats(h,a,fx){
     if(c.need&&scope==="ucl"){
       body+=`<div class="box"><div class="empty">No tenemos córners ni tarjetas de la Champions League. Prueba con Goles, o cambia a Últimos 10, De local o De visita.</div></div>`;
     }else{
-      body+=chartCard(h,sh,vf,line)+chartCard(a,sa,vf,line);
+      const bf=who==="tot"||met==="goals"?bkfn(met):null;
+      body+=chartCard(h,sh,vf,line,bf)+chartCard(a,sa,vf,line,bf);
       const test=m=>{const v=vf(m);return v===null?null:hitV(v,line);};
       const lbl=(dir==="o"?"Más de ":"Menos de ")+line+" "+c.n+(who==="team"?" de cada equipo":"");
       body+=evCard(lbl,evRows(h,a,test,{h2h:who==="tot"}),EVNOTE);
