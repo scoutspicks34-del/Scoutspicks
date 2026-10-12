@@ -127,8 +127,12 @@ def league_params(df, ref):
             gf, ga = (r.FTHG, r.FTAG) if r.HomeTeam == t else (r.FTAG, r.FTHG)
             s += "G" if gf > ga else ("E" if gf == ga else "P")
         form[t] = s
+    ht = sorted(set(df.HomeTeam) | set(df.AwayTeam))
+    hi = {t: i for i, t in enumerate(ht)}
+    hm = [[int(d.strftime("%Y%m%d")), hi[h], hi[a], int(x), int(y)]
+          for d, h, a, x, y in zip(df.Date, df.HomeTeam, df.AwayTeam, df.FTHG, df.FTAG)]
     return {"updated": str(df.Date.max().date()), "n": int(len(df)), "models": models,
-            "teams": teams, "form": form, "inj": None}
+            "teams": teams, "form": form, "inj": None, "hteams": ht, "hm": hm}
 
 
 # ------------------------------------------------------------------ nombres
@@ -375,6 +379,28 @@ def market_lambdas(odds, start):
         log(f"  lambdas del mercado: {e}")
         return None
 
+
+UCL_EXTRA = {"atletico madrid": "Ath Madrid", "borussia dortmund": "Dortmund", "rb leipzig": "RB Leipzig",
+             "bayern munich": "Bayern Munich", "real betis": "Betis", "manchester city": "Man City",
+             "manchester united": "Man United"}
+
+
+def ucl_domestic(params):
+    """Para cada club de Champions, en qué liga local tenemos su historial (solo Bundesliga, Premier y La Liga)."""
+    out = {}
+    for t in UCL_TEAMS:
+        n = norm(t)
+        for key in LEAGUES:
+            teams = params.get(key, {}).get("hteams", [])
+            cands = [UCL_EXTRA.get(n), ALIAS.get(n), t]
+            name = next((c for c in cands if c and c in teams), None)
+            if not name:
+                name = next((x for x in teams if norm(x) == n), None)
+            if name:
+                out[t] = [key, name]
+                break
+    return out
+
 # ------------------------------------------------------------------ Champions League (Elo)
 UCL_TEAMS = ["AEK Athens", "Arsenal", "Aston Villa", "Atlético Madrid", "Barcelona", "Bayern Munich", "Bodø/Glimt",
              "Borussia Dortmund", "Club Brugge", "Como", "Feyenoord", "Fenerbahçe", "Galatasaray", "Inter Milan",
@@ -515,6 +541,8 @@ def build(template, out_path="docs/index.html"):
         raise SystemExit("No se pudo cargar ninguna liga; no se actualiza la página.")
     u = ucl_params(today)
     if u:
+        u["map"] = ucl_domestic(params)
+        log("  Champions con historial local: " + ", ".join(sorted(u["map"])))
         params["ucl"] = u
     if os.environ.get("USE_API_FOOTBALL") == "1":
         fixtures, note = api_enrich(params, today)
@@ -646,6 +674,24 @@ select,input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;b
 .adj{display:flex;flex-direction:column;gap:8px;padding-top:10px}
 .adj .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .lbl{font-size:12px;color:var(--muted)}
+/* historial */
+.hgrid{display:grid;gap:18px;grid-template-columns:minmax(0,1fr)}
+.ht{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ht h3{font:700 17px/1.2 var(--disp);letter-spacing:-.01em}
+.hsum{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.hsum div{background:var(--soft);border-radius:12px;padding:8px 10px;font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:2px;line-height:1.25}
+.hsum b{font:700 18px/1 var(--disp);color:var(--ink);letter-spacing:-.02em}
+.hr{display:grid;grid-template-columns:58px 22px 1fr;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--line);font-size:13.5px}
+.hr:first-of-type{border-top:0}
+.hd{color:var(--muted);font-size:12px;line-height:1.2;white-space:nowrap}
+.hc{font:700 10px var(--disp);width:22px;height:22px;border-radius:7px;display:grid;place-items:center;color:#fff}
+.hc.G{background:var(--good)} .hc.E{background:#8791b4} .hc.P{background:var(--bad)}
+.hm{display:flex;flex-wrap:wrap;gap:0 6px;align-items:baseline;min-width:0}
+.hm .me{font-weight:700}
+.hm .sc{font:700 15px var(--disp);padding:0 2px}
+.h2h{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:14px}
+.h2h h3{font:700 17px/1.2 var(--disp)}
+@media (min-width:700px){.hgrid{grid-template-columns:1fr 1fr;column-gap:24px}}
 /* mercados */
 .callout{background:var(--warn-bg);color:var(--ink);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1.4}
 .grp{border-top:1px solid var(--line)}
@@ -761,6 +807,13 @@ select,input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;b
           </div>
         </div>
       </details>
+    </section>
+
+    <section class="panel" aria-label="Historial reciente">
+      <h2>Últimos partidos</h2>
+      <div class="sub">G ganó, E empató, P perdió. Resultados de liga de cada equipo, del más reciente al más antiguo.</div>
+      <div class="hgrid" id="hist"></div>
+      <div id="h2h"></div>
     </section>
 
     <section class="panel" aria-label="Mercados y cuotas">
@@ -894,15 +947,60 @@ function injHtml(h,a){
                    :`<div class="none"><b>${esc(t)}</b>: sin bajas reportadas</div>`;};
   return one(h)+one(a);
 }
+const MONTHS=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+function ymd(n){const y=Math.floor(n/10000),m=Math.floor(n/100)%100,d=n%100;return d+" "+MONTHS[m-1]+" "+String(y).slice(2);}
+function resolveHist(team){
+  const L=DATA.leagues[league];
+  if(L.kind==="elo"){const m=(L.map||{})[team]; return m?{key:m[0],name:m[1],local:true}:null;}
+  return L.hm?{key:league,name:team,local:false}:null;
+}
+function lastMatches(r,n){
+  const L=DATA.leagues[r.key]; if(!L||!L.hm)return [];
+  const i=L.hteams.indexOf(r.name); if(i<0)return [];
+  const out=[];
+  for(let k=L.hm.length-1;k>=0&&out.length<n;k--){const m=L.hm[k];
+    if(m[1]===i||m[2]===i)out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],home:m[1]===i});}
+  return out;
+}
+function matchRow(m,me){
+  const gf=m.home?m.hg:m.ag, ga=m.home?m.ag:m.hg, res=gf>ga?"G":gf===ga?"E":"P";
+  const nm=(t)=>t===me?`<span class="me">${esc(t)}</span>`:`<span>${esc(t)}</span>`;
+  return `<div class="hr"><span class="hd">${ymd(m.d)}</span><span class="hc ${res}">${res}</span><span class="hm">${nm(m.h)}<span class="sc">${m.hg}–${m.ag}</span>${nm(m.a)}</span></div>`;
+}
+function histCol(team,res){
+  if(!res)return `<div class="ht"><h3>${esc(team)}</h3><div class="empty">No tenemos el historial de este club. Solo hay datos de Bundesliga, Premier League y La Liga.</div></div>`;
+  const ms=lastMatches(res,8);
+  if(!ms.length)return `<div class="ht"><h3>${esc(team)}</h3><div class="empty">Sin partidos en los datos.</div></div>`;
+  let gf=0,ga=0,bt=0,o25=0;
+  ms.forEach(m=>{const f=m.home?m.hg:m.ag,c=m.home?m.ag:m.hg;gf+=f;ga+=c;if(f>0&&c>0)bt++;if(f+c>=3)o25++;});
+  const n=ms.length, av=x=>(x/n).toFixed(1);
+  return `<div class="ht"><h3>${esc(team)}</h3>
+    ${res.local?`<div class="sub">Sus últimos partidos de liga local (no incluye Champions).</div>`:""}
+    <div class="hsum"><div><b>${av(gf)} – ${av(ga)}</b>Goles a favor y en contra por partido</div><div><b>${bt} de ${n}</b>Ambos anotaron</div><div><b>${o25} de ${n}</b>Más de 2.5 goles</div></div>
+    <div>${ms.map(m=>matchRow(m,res.name)).join("")}</div></div>`;
+}
+function renderHist(h,a){
+  const rh=resolveHist(h), ra=resolveHist(a);
+  $("hist").innerHTML=histCol(h,rh)+histCol(a,ra);
+  let h2="";
+  if(rh&&ra&&rh.key===ra.key){
+    const L=DATA.leagues[rh.key], i=L.hteams.indexOf(rh.name), j=L.hteams.indexOf(ra.name), out=[];
+    for(let k=L.hm.length-1;k>=0&&out.length<6;k--){const m=L.hm[k];
+      if((m[1]===i&&m[2]===j)||(m[1]===j&&m[2]===i))out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],home:m[1]===i});}
+    h2=out.length?`<div class="h2h"><h3>Enfrentamientos directos</h3><div class="sub">Solo informativo: el modelo no usa estos resultados. G, E y P son desde el punto de vista de ${esc(rh.name)}.</div><div>${out.map(m=>matchRow(m,rh.name)).join("")}</div></div>`
+      :`<div class="h2h"><h3>Enfrentamientos directos</h3><div class="empty">No se han enfrentado en los últimos años de datos.</div></div>`;
+  }
+  $("h2h").innerHTML=h2;
+}
 function render(){
   const h=$("home").value,a=$("away").value,L=DATA.leagues[league];
   $("upd").innerHTML=(L.kind==="elo"?"Ranking Elo del "+esc(L.updated):"Datos hasta "+esc(L.updated))+"<br>Actualizado "+esc((DATA.generated||"—").slice(0,16));
-  if(h===a){$("mk").innerHTML=`<div class="empty">Elige dos equipos distintos.</div>`;return;}
+  if(h===a){$("mk").innerHTML=`<div class="empty">Elige dos equipos distintos.</div>`;$("hist").innerHTML="";$("h2h").innerHTML="";return;}
   const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
   const fx=(DATA.fixtures||[]).find(f=>f.lg===league&&f.h===h&&f.a===a);
   cur=compute(h,a,fh,fa,fx&&fx.ml?fx.ml:null);
   $("hMeta").textContent=L.name+(fx?", "+dtxt(fx.date):"");
-  $("hn").textContent=h; $("an").textContent=a;
+  $("hn").textContent=h; $("an").textContent=a; renderHist(h,a);
   $("hf").innerHTML=formHtml(h); $("af").innerHTML=formHtml(a);
   $("inj").innerHTML=L.kind==="elo"?`<div class="none">Champions League: las probabilidades salen del ranking Elo de los clubes (sin córners ni tiros, porque no hay datos comparables entre ligas). No están validadas con partidos pasados.</div>`:injHtml(h,a);
   $("xh").textContent=cur.lh.toFixed(2); $("xa").textContent=cur.la.toFixed(2);
