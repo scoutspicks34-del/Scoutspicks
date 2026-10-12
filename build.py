@@ -350,6 +350,31 @@ def csv_fixtures(params, today, text=None):
     return out, note
 
 
+
+def market_lambdas(odds, start):
+    """Goles esperados que reproducen las cuotas 1X2 y más/menos 2.5 (sin margen). Devuelve (local, visitante) o None."""
+    try:
+        from scipy.optimize import least_squares
+        from scipy.stats import poisson
+        k = ["1", "X", "2", "o:goals:2.5", "u:goals:2.5"]
+        if not all(odds.get(x) and odds[x] > 1 for x in k):
+            return None
+        q = np.array([1 / odds[x] for x in k[:3]]); q = q / q.sum()
+        po = (1 / odds["o:goals:2.5"]) / (1 / odds["o:goals:2.5"] + 1 / odds["u:goals:2.5"])
+        tgt = np.r_[q, po]
+        G = np.arange(11); i, j = np.indices((11, 11))
+
+        def tg(x):
+            m = np.outer(poisson.pmf(G, np.exp(x[0])), poisson.pmf(G, np.exp(x[1]))); m = m / m.sum()
+            return np.array([m[i > j].sum(), m[i == j].sum(), m[i < j].sum(), m[(i + j) >= 3].sum()]) - tgt
+
+        r = least_squares(tg, np.log(np.maximum(start, 0.2)))
+        lh, la = float(np.exp(r.x[0])), float(np.exp(r.x[1]))
+        return [round(lh, 4), round(la, 4)] if 0.1 < lh < 6 and 0.1 < la < 6 else None
+    except Exception as e:  # noqa: BLE001
+        log(f"  lambdas del mercado: {e}")
+        return None
+
 # ------------------------------------------------------------------ Champions League (Elo)
 UCL_TEAMS = ["AEK Athens", "Arsenal", "Aston Villa", "Atlético Madrid", "Barcelona", "Bayern Munich", "Bodø/Glimt",
              "Borussia Dortmund", "Club Brugge", "Como", "Feyenoord", "Fenerbahçe", "Galatasaray", "Inter Milan",
@@ -495,6 +520,13 @@ def build(template, out_path="docs/index.html"):
         fixtures, note = api_enrich(params, today)
     else:
         fixtures, note = csv_fixtures(params, today)
+    for f in fixtures:
+        M = params.get(f["lg"], {}).get("models", {}).get("goles") if f.get("odds") else None
+        if M and f["h"] in M["att"] and f["a"] in M["att"]:
+            st = [np.exp(M["mu"] + M["home"] + M["att"][f["h"]] - M["de"][f["a"]]), np.exp(M["mu"] + M["att"][f["a"]] - M["de"][f["h"]])]
+            ml = market_lambdas(f["odds"], st)
+            if ml:
+                f["ml"] = ml
     fixtures = sorted(fixtures + ucl_fixtures(params, today), key=lambda x: x["date"])
     if "ucl" not in params:
         det = [l.strip() for l in LOG if "clubelo" in l or "Elo" in l]
@@ -712,10 +744,11 @@ function eloLam(E,T){
 }
 
 /* ---------- cálculo de un partido ---------- */
-function compute(h, a, fh, fa){
+function compute(h, a, fh, fa, ml){
   const L = DATA.leagues[league], out = {rows:[], chips:[]};
   let l0;
-  if(L.kind==="elo"){ const E=1/(1+Math.pow(10,-((L.elo[h]+L.hfa-L.elo[a])/400))); l0=eloLam(E,L.T); }
+  if(ml){ l0=ml; }
+  else if(L.kind==="elo"){ const E=1/(1+Math.pow(10,-((L.elo[h]+L.hfa-L.elo[a])/400))); l0=eloLam(E,L.T); }
   else { l0=lam(L.models.goles,h,a); }
   const lh = l0[0]*fh, la = l0[1]*fa, m = scoreMatrix(lh,la);
   let pH=0,pD=0,pA=0,o15=0,o25=0,o35=0,bt=0;
@@ -723,7 +756,8 @@ function compute(h, a, fh, fa){
     const v=m[i][j]; if(i>j)pH+=v; else if(i===j)pD+=v; else pA+=v;
     if(i+j>=2)o15+=v; if(i+j>=3)o25+=v; if(i+j>=4)o35+=v; if(i>=1&&j>=1)bt+=v;
   }
-  out.lh=lh; out.la=la; out.p=[pH,pD,pA]; out.o25=o25; out.bt=bt;
+  if(ml){ bt=1/(1+Math.exp(-(Math.log(bt/(1-bt))+0.14))); }   // en pruebas, "ambos anotan" sale ~3 pts más alto de lo que da Poisson
+  out.lh=lh; out.la=la; out.p=[pH,pD,pA]; out.o25=o25; out.bt=bt; out.fromMkt=!!ml;
   const R=(sec,label,p,key,fav)=>out.rows.push({sec,label,p,key,fav});
   R("Resultado",h+" gana",pH,"1",true); R("Resultado","Empate",pD,"X"); R("Resultado",a+" gana",pA,"2",true);
   R("Resultado","Doble oportunidad "+h+" o empate",pH+pD); R("Resultado","Doble oportunidad "+a+" o empate",pA+pD);
@@ -770,7 +804,8 @@ function render(){
     :`${L.name} · datos hasta ${L.updated} · actualizado ${DATA.generated||"—"}`;
   if(h===a){$("mk").innerHTML=`<tr><td colspan="6" class="empty">Elige dos equipos distintos.</td></tr>`;return;}
   const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
-  cur=compute(h,a,fh,fa);
+  const fx0=(DATA.fixtures||[]).find(f=>f.lg===league&&f.h===h&&f.a===a);
+  cur=compute(h,a,fh,fa,fx0&&fx0.ml?fx0.ml:null);
   $("hn").textContent=h; $("an").textContent=a;
   $("hf").innerHTML=formHtml(h); $("af").innerHTML=formHtml(a);
   $("inj").innerHTML=L.kind==="elo"?`<div class="none">Champions League: las probabilidades salen del ranking Elo de los clubes (sin corners ni tiros, no hay datos comparables entre ligas). No están validadas con partidos pasados de Champions.</div>`:injHtml(h,a);
@@ -796,7 +831,8 @@ function render(){
   const o=fx&&fx.odds;
   if(o&&o["1"]&&o["X"]&&o["2"]){
     const q=[1/o["1"],1/o["X"],1/o["2"]], t=q[0]+q[1]+q[2], m=q.map(x=>x/t);
-    ref=`<b>Casas de apuestas (sin margen):</b> ${h} ${pct(m[0])} · Empate ${pct(m[1])} · ${a} ${pct(m[2])}. En las pruebas con partidos pasados, esta cifra acertó más que el modelo; úsala como referencia principal. `+ref;
+    ref=`<b>Casas de apuestas (sin margen):</b> ${h} ${pct(m[0])} · Empate ${pct(m[1])} · ${a} ${pct(m[2])}. En las pruebas con partidos pasados, esta cifra acertó más que el modelo; úsala como referencia principal. `
+      +(cur.fromMkt?`<b>Goles, más/menos y ambos anotan están calculados a partir de estas cuotas</b> (en las pruebas salieron más precisos que los del modelo). Córners y tiros siguen siendo del modelo. `:"")+(cur.fromMkt?"":ref);
   }
   if(L.kind==="elo") ref=`<b>Champions League:</b> sin validar con partidos pasados. Como referencia, en las 3 ligas el modelo se desvió de las casas hasta ±8 puntos en el 1X2; aquí el error puede ser mayor.`;
   $("mktRef").innerHTML=ref;
