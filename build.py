@@ -1544,8 +1544,10 @@ function expectHtml(h,a,c,fin){
   const G=linesOver(x=>gp(x),0.5,5.5,"goles"), gOver=gp(2.5)>=0.5, gl=lineTxt(G,gOver);
   const gtype=c.o25>=0.60?"partido abierto":c.o25<=0.40?"partido cerrado":"partido equilibrado en goles";
   if(gl)li.push(`<li><b>Goles:</b> se espera un ${gtype} (~${(c.lh+c.la).toFixed(1)} goles). Línea sugerida: ${gl.pk.lbl} ${pcTag(gl.pk.p)}.${gl.sf?` Más segura: ${gl.sf.lbl} ${pcTag(gl.sf.p)}.`:""}</li>`);
-  const bt=c.bt;
-  li.push(`<li><b>Ambos anotan:</b> ${bt>=0.65?`es probable que los dos marquen ${pcTag(bt)}`:bt<=0.35?`es probable que uno no marque (Ambos anotan: no ${pcTag(1-bt)})`:`sin ventaja clara (sí ${pct(bt)}, no ${pct(1-bt)})`}.</li>`);
+  const bt=c.bt, yes=bt>=0.5, pl=yes?bt:1-bt;
+  const bform=t=>{const sr=seriesFor(t,league==="ucl"?"ucl":"all",10); if(!sr||!sr.ok)return null; const r=sr.ms.map(nrm).map(m=>m.f>0&&m.c>0); return r.length>=4?{t:t,x:r.filter(Boolean).length,n:r.length}:null;};
+  const bf=[bform(h),bform(a)].filter(Boolean), bfTxt=bf.length?` En sus últimos partidos, anotaron los dos en ${bf.map(z=>`${z.x} de ${z.n} de ${esc2(z.t)}`).join(" y ")}.`:"";
+  li.push(`<li><b>Ambos anotan:</b> ${pl>=0.65?(yes?"es probable que los dos marquen":"es probable que al menos uno no marque"):pl>=0.57?`ligera ventaja para "${yes?"sí":"no"}", sin ser una opción clara`:"muy parejo, sin ventaja clara"}. Sí ${pcTag(bt)} · No ${pcTag(1-bt)}.${bfTxt}</li>`);
   const mk=c.mk||{}, band=(arr)=>arr.filter(x=>x.p>=0.65&&x.p<=0.85).sort((u,v)=>Math.abs(u.p-0.75)-Math.abs(v.p-0.75))[0]||null;
   const one=(k,nm,hiTot)=>{              // mejor "más de" y mejor "menos de" entre 65% y 85% (la más cercana a 75%)
     const M=mk[k]; if(!M)return null;
