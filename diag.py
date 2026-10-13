@@ -7,13 +7,10 @@ FD = "https://www.football-data.co.uk/"
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer/"
 TS = "https://www.thesportsdb.com/api/v1/json/3/"
 ESPN2 = "https://site.api.espn.com/apis/site/v2/sports/soccer/"
-URLS = [ESPN2 + "ksa.1/scoreboard?dates=20261005-20261011", ESPN2 + "ksa.1/scoreboard?dates=20260901-20261011", ESPN2 + "ksa.1/scoreboard?dates=20260801-20261011",
-        ESPN2 + "ksa.1/scoreboard?dates=2026", ESPN2 + "ksa.1/scoreboard?season=2025&limit=500", ESPN2 + "ksa.1/scoreboard?dates=20260315-20260321&limit=100",
-        ESPN2 + "ksa.1/teams", ESPN2 + "ksa.1/scoreboard?dates=20260215",
-        "https://sports.core.api.espn.com/v2/sports/soccer/leagues/ksa.1/seasons/2025/types/1/events?limit=1000",
-        "https://sports.core.api.espn.com/v2/sports/soccer/leagues/ksa.1/seasons",
-        "https://site.api.espn.com/apis/site/v2/sports/soccer/ksa.1/teams/18267/schedule?season=2025",
-        "https://site.web.api.espn.com/apis/v2/sports/soccer/ksa.1/standings?season=2025"]
+ESPN2 = "https://site.api.espn.com/apis/site/v2/sports/soccer/"
+URLS = [ESPN2 + "ksa.1/scoreboard?dates=202509", ESPN2 + "ksa.1/scoreboard?dates=202510&limit=500", ESPN2 + "ksa.1/scoreboard?dates=2025&limit=1000",
+        ESPN2 + "ksa.1/scoreboard?dates=2025&limit=500", ESPN2 + "ksa.1/scoreboard?dates=202603", ESPN2 + "usa.1/scoreboard?dates=202607&limit=500",
+        ESPN2 + "mex.1/scoreboard?dates=202608", ESPN2 + "nor.1/scoreboard?dates=202609", ESPN2 + "ksa.1/scoreboard?dates=20261011"]
 out = {}
 for u in URLS:
     r = {}
@@ -31,6 +28,12 @@ for u in URLS:
                 j = x.json()
                 if isinstance(j, dict):
                     r["keys"] = list(j)[:12]
+                    if isinstance(j.get("events"), list) and j["events"]:
+                        ev = j["events"]
+                        r["completed"] = sum(1 for e in ev if (((e.get("competitions") or [{}])[0].get("status") or e.get("status") or {}).get("type") or {}).get("completed"))
+                        r["dates"] = [ev[0].get("date"), ev[-1].get("date")]
+                        e0 = ev[0]; c0 = (e0.get("competitions") or [{}])[0]
+                        r["sample"] = {"name": e0.get("name"), "status": ((c0.get("status") or {}).get("type") or {}).get("name"), "comp": [(c.get("homeAway"), (c.get("team") or {}).get("displayName"), c.get("score")) for c in c0.get("competitors", [])], "odds": c0.get("odds")}
                     for k in ("events", "event", "leagues", "countrys", "countries"):
                         if isinstance(j.get(k), list):
                             r[k] = len(j[k])
@@ -45,4 +48,4 @@ for u in URLS:
         r["error"] = str(e)[:200]
     out[u] = r
     print(u, r.get("status"), r.get("bytes"), r.get("error", ""), flush=True)
-json.dump(out, open("data/diag2.json", "w"), ensure_ascii=False, indent=1)
+json.dump(out, open("data/diag3.json", "w"), ensure_ascii=False, indent=1)
