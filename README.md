@@ -36,3 +36,6 @@ Kelly fraccional al 25% o 30%: `stake = bankroll × fracción × (p·cuota − 1
 
 ## Calculadora Props
 Pestaña "Props" (menú de abajo). Poisson con el promedio y la línea que escribes: Menos de = suma de P(0)…P(entero bajo la línea), Más de = 1 − Menos. Líneas enteras: la devolución se calcula aparte. Usa el mismo bankroll y Kelly que Apostar (se comparten).
+
+## Cuotas automáticas con The Odds API (pestaña Apostar)
+Desde el navegador: la clave se pega en la página y vive solo en `localStorage` (nunca va en el código ni en el repositorio). Cada carga cuesta 2 créditos (regions=eu × markets=h2h,totals). La respuesta se guarda 30 min por liga. Referencia: Pinnacle; si no está, promedio de las casas. Llena 1X2 y Más/Menos 1.5, 2.5 y 3.5 (las que la API traiga).

@@ -1442,6 +1442,14 @@ ul.exp b{font-weight:800}
 .nav button{min-width:0}
 #pRes .mrow{border-top:1px solid var(--line)} #pRes .mrow:first-of-type{border-top:0}
 #vProps .box>.f+.pick{margin-top:12px}
+.apibox{margin-top:10px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px}
+.apibox summary{font-weight:700;font-size:14px}
+.keyrow{display:grid;grid-template-columns:1fr auto auto;gap:8px;margin-top:10px;align-items:center}
+.apirow{margin-top:12px} .apirow .btn{width:100%}
+.apirow .btn:disabled{opacity:.55}
+#apiSt{margin-top:8px;line-height:1.45} #apiSt.err{color:var(--bad)} #apiSt.ok b{color:var(--good)}
+#apiRem{font-size:12px;margin-top:4px}
+.linkb{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;font:inherit;cursor:pointer}
 .stk{margin-top:7px;font-size:14px;line-height:1.35}
 .stk b{font-weight:800}
 .stk.yes b{color:var(--good)} .stk.no{color:var(--muted)}
@@ -1674,6 +1682,15 @@ ul.exp b{font-weight:800}
       <div class="pane" id="pMk" hidden>
         <div class="box">
           <h3>Mercados y cuotas</h3>
+          <details class="apibox" id="apiBox">
+            <summary>Cuotas automáticas (The Odds API)</summary>
+            <div class="sub" style="margin-top:8px">Pega tu clave gratuita de the-odds-api.com. Se guarda solo en este navegador (no está en el código de la página ni la ve nadie más) y solo se envía a the-odds-api.com cuando tocas el botón.</div>
+            <div class="keyrow"><input class="in" id="apiKey" type="password" placeholder="Tu API Key" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="API Key de The Odds API"><button class="mini" id="apiSave" type="button">Guardar</button><button class="mini" id="apiDel" type="button">Borrar</button></div>
+            <div class="sub" id="apiKeySt"></div>
+          </details>
+          <div class="apirow"><button class="btn" id="apiLoad" type="button">🔄 Cargar cuotas del mercado</button></div>
+          <div class="sub" id="apiSt"></div>
+          <div class="sub" id="apiRem"></div>
           <div class="bank">
             <label>Bankroll (Saldo total):</label>
             <div class="bankrow"><span class="cur">L</span><input class="bankIn" inputmode="decimal" placeholder="Ej. 5000" autocomplete="off" aria-label="Bankroll, saldo total disponible en lempiras"></div>
@@ -2393,6 +2410,121 @@ $("pRes").addEventListener("click",ev=>{
   b.textContent="Anotada"; setTimeout(()=>{b.textContent="Anotar";},1500);
 });
 
+/* ---------- The Odds API: cuotas del mercado desde el navegador ---------- */
+const ODDS_SPORT={bundesliga:"soccer_germany_bundesliga",premier:"soccer_epl",laliga:"soccer_spain_la_liga",eredivisie:"soccer_netherlands_eredivisie",noruega:"soccer_norway_eliteserien",arabia:"soccer_saudi_arabia_pro_league",mls:"soccer_usa_mls",ligamx:"soccer_mexico_ligamx",ucl:"soccer_uefa_champs_league"};
+const KEYA="scoutpicks.oddsapikey.v1", KEYC="scoutpicks.oddsapi.v1", ODDS_TTL=30*60*1000;
+let apiStore={}, memKeyA="", memCacheA={};
+function getApiKey(){try{return localStorage.getItem(KEYA)||memKeyA;}catch(e){return memKeyA;}}
+function setApiKey(k){memKeyA=k;try{if(k)localStorage.setItem(KEYA,k);else localStorage.removeItem(KEYA);}catch(e){}}
+function readApiCache(){try{return JSON.parse(localStorage.getItem(KEYC)||"{}");}catch(e){return memCacheA;}}
+function writeApiCache(c){memCacheA=c;try{localStorage.setItem(KEYC,JSON.stringify(c));}catch(e){}}
+
+/* --- emparejar nombres: sin acentos ni FC/SC/CF…, alias conocidos y coincidencia parcial --- */
+/* ODDSAPI-MATCH-BEGIN */
+const TN_NOISE=new Set("fc sc cf ac as afc fk sk bk if il cd ud rcd ssc ca sv tsg vfb vfl fsv bsc club de del calcio cp kv the 1 04 05 96 98 1899 1846 1848 1909 1907".split(" "));
+const TN_TOK={utd:"united",man:"manchester",nottm:"nottingham",nott:"nottingham",sp:"sporting",munchen:"munich",lisboa:"lisbon",internazionale:"inter",koln:"cologne",kiev:"kyiv",ny:"new york",st:"saint"};
+const TN_ALIAS={"ath madrid":"atletico madrid","ath bilbao":"athletic","athletic bilbao":"athletic","athletic club":"athletic","sociedad":"real sociedad","betis":"real betis","espanol":"espanyol","vallecano":"rayo vallecano","celta":"celta vigo","tottenham":"tottenham hotspur","wolves":"wolverhampton wanderers","newcastle":"newcastle united","west ham":"west ham united","leicester":"leicester city","leeds":"leeds united","brighton":"brighton and hove albion","west brom":"west bromwich albion","dortmund":"borussia dortmund","leverkusen":"bayer leverkusen","ein frankfurt":"eintracht frankfurt","mgladbach":"borussia monchengladbach","gladbach":"borussia monchengladbach","monchengladbach":"borussia monchengladbach","bayern munich":"bayern","bayern munchen":"bayern","inter milan":"inter","ac milan":"milan","sporting cp":"sporting lisbon","psv eindhoven":"psv","paris saint germain":"psg","paris sg":"psg","olympique marseille":"marseille","olympique lyonnais":"lyon","red star belgrade":"crvena zvezda","dynamo kiev":"dynamo kyiv","copenhagen":"kobenhavn","fc copenhagen":"kobenhavn","salzburg":"red bull salzburg","rb salzburg":"red bull salzburg","club brugge":"brugge","guadalajara chivas":"guadalajara","chivas":"guadalajara","tigres uanl":"tigres","pumas unam":"unam pumas","la galaxy":"los angeles galaxy","lafc":"los angeles fc","dc united":"dc united","oviedo":"real oviedo","valladolid":"real valladolid","zaragoza":"real zaragoza","vitoria guimaraes":"guimaraes","sheff utd":"sheffield united","sheff wed":"sheffield wednesday","qpr":"queens park rangers","hamburg":"hamburger","hamburger sv":"hamburger","bremen":"werder bremen","fortuna dusseldorf":"dusseldorf","kaiserslautern":"kaiserslautern","stuttgart":"vfb stuttgart"};
+function tnNorm(x){
+  let s=String(x||"").toLowerCase().replace(/ø/g,"o").replace(/æ/g,"ae").replace(/ß/g,"ss").replace(/ł/g,"l").replace(/đ/g,"d").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/&/g," and ").replace(/['’.]/g,"").replace(/[^a-z0-9]+/g," ").trim();
+  s=TN_ALIAS[s]||s;
+  let t=s.split(" ").filter(w=>w&&!TN_NOISE.has(w));
+  s=t.join(" "); s=TN_ALIAS[s]||s;
+  t=[]; s.split(" ").forEach(w=>{if(!w||TN_NOISE.has(w))return; const r=TN_TOK[w]||w; r.split(" ").forEach(z=>{if(!t.includes(z))t.push(z);});});
+  return t;
+}
+function lev(a,b){const m=a.length,n=b.length; if(!m)return n; if(!n)return m; let p=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){const c=[i]; for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1)); p=c;} return p[n];}
+function tokEq(x,y){return x===y||(x.length>=6&&y.length>=6&&lev(x,y)/Math.max(x.length,y.length)<=0.15);}
+function teamScore(a,b){                       // 0..1: 1 = mismo nombre; ≥0.8 se considera el mismo equipo
+  const A=tnNorm(a), B=tnNorm(b); if(!A.length||!B.length)return 0;
+  const sm=A.length<=B.length?A:B, lg=A.length<=B.length?B:A, used=new Set(); let hit=0;
+  sm.forEach(x=>{const j=lg.findIndex((y,k)=>!used.has(k)&&tokEq(x,y)); if(j>=0){used.add(j);hit++;}});
+  if(hit===sm.length)return sm.length===lg.length?1:(sm.some(w=>w.length>=4)?0.85:0.5);   // todas las palabras del nombre corto están en el largo ("Tottenham" ⊂ "Tottenham Hotspur")
+  return hit/Math.max(A.length,B.length)*0.9;
+}
+function bestTeam(name,cands){let b=null,bs=0; cands.forEach(c=>{const v=teamScore(name,c); if(v>bs){bs=v;b=c;}}); return bs>=0.8?b:null;}
+function findApiEvent(events,h,a,whenMs){
+  let best=null,bd=Infinity;
+  (events||[]).forEach(ev=>{
+    const d1=Math.min(teamScore(h,ev.home),teamScore(a,ev.away)), d2=Math.min(teamScore(h,ev.away),teamScore(a,ev.home));
+    const sc=Math.max(d1,d2); if(sc<0.8)return;
+    const dist=whenMs?Math.abs(Date.parse(ev.t)-whenMs):Date.parse(ev.t);
+    if(dist<bd){bd=dist;best={ev:ev,flip:d2>d1};}
+  });
+  return best;
+}
+/* ODDSAPI-MATCH-END */
+/* --- cuotas del evento: Pinnacle como referencia; si no está, promedio de las casas --- */
+function compactApiEvent(ev){
+  const books=ev.bookmakers||[], home=ev.home_team, away=ev.away_team, pin=books.find(b=>b.key==="pinnacle");
+  const mk=(b,key)=>(b.markets||[]).find(m=>m.key===key);
+  const h2h=b=>{const m=mk(b,"h2h"); if(!m)return null; const g=n=>{const o=(m.outcomes||[]).find(x=>x.name===n);return o&&o.price>1?o.price:null;};
+    const r={"1":g(home),"X":g("Draw"),"2":g(away)}; return r["1"]&&r["X"]&&r["2"]?r:null;};
+  const tot=(b,x)=>{const m=mk(b,"totals"); if(!m)return null; const f=n=>{const o=(m.outcomes||[]).find(z=>z.name===n&&Math.abs(z.point-x)<1e-9);return o&&o.price>1?o.price:null;};
+    const o=f("Over"),u=f("Under"); return o&&u?{o:o,u:u}:null;};
+  const mean=a=>a.reduce((s,v)=>s+v,0)/a.length;
+  const odds={}, used={pin:0,avg:0}; let nAvg=0;
+  const one=(get,put)=>{ let r=pin?get(pin):null, from="pin";
+    if(!r){const l=books.map(get).filter(Boolean); if(l.length){r=put.avg(l); from="avg"; nAvg=Math.max(nAvg,l.length);}}
+    if(r){put.set(r); used[from]++;} };
+  one(h2h,{avg:l=>({"1":mean(l.map(z=>z["1"])),"X":mean(l.map(z=>z["X"])),"2":mean(l.map(z=>z["2"]))}),set:r=>{odds["1"]=r["1"];odds["X"]=r["X"];odds["2"]=r["2"];}});
+  [1.5,2.5,3.5].forEach(x=>one(b=>tot(b,x),{avg:l=>({o:mean(l.map(z=>z.o)),u:mean(l.map(z=>z.u))}),set:r=>{odds["o:goals:"+x]=r.o;odds["u:goals:"+x]=r.u;}}));
+  Object.keys(odds).forEach(k=>{odds[k]=Math.round(odds[k]*100)/100;});
+  const src=!used.pin&&!used.avg?"":used.pin&&!used.avg?"Pinnacle":!used.pin?"promedio de "+nAvg+(nAvg===1?" casa":" casas"):"Pinnacle; promedio de las demás casas donde faltó";
+  return {home:home,away:away,t:ev.commence_time,odds:odds,src:src};
+}
+function agoTxt(ts){const m=Math.round((Date.now()-ts)/60000); return m<1?"hace menos de 1 minuto":m<60?"hace "+m+" min":"hace "+Math.round(m/60)+" h";}
+function apiMsg(t,cls){const e=$("apiSt"); e.className="sub"+(cls?" "+cls:""); e.innerHTML=t;}
+function apiRemTxt(c){const e=$("apiRem"); e.textContent=c&&c.remaining!=null&&c.remaining!==""?"Consultas gratis que te quedan este mes: "+c.remaining+" (cada carga cuesta 2).":(c?"No pude leer cuántas consultas te quedan (el navegador no deja ver ese dato); míralo en tu panel de the-odds-api.com.":"");}
+function keyStTxt(){const k=getApiKey(); $("apiKeySt").textContent=k?"Clave guardada en este navegador (termina en …"+k.slice(-4)+").":"Todavía no hay clave guardada."; $("apiBox").open=!k;}
+async function apiLoad(force){
+  const key=getApiKey(), btn=$("apiLoad");
+  if(!key){$("apiBox").open=true; return apiMsg("Primero pega tu API Key arriba y toca Guardar.","err");}
+  const sport=ODDS_SPORT[league];
+  if(!sport)return apiMsg("Esta liga no tiene cuotas en The Odds API.","err");
+  const h=$("home").value, a=$("away").value; if(!h||!a||h===a)return;
+  const cache=readApiCache(); let c=cache[sport], used="";
+  btn.disabled=true; btn.textContent="Cargando…";
+  try{
+    if(!force&&c&&Date.now()-c.ts<ODDS_TTL){used="cache";}
+    else{
+      let res;
+      try{res=await fetch("https://api.the-odds-api.com/v4/sports/"+encodeURIComponent(sport)+"/odds/?apiKey="+encodeURIComponent(key)+"&regions=eu&markets=h2h,totals&oddsFormat=decimal");}
+      catch(e){ if(c){used="stale";} else return apiMsg("No pude conectar con The Odds API (sin internet o conexión bloqueada). Intenta de nuevo.","err"); }
+      if(res){
+        if(res.status===401||res.status===403){return apiMsg("The Odds API no aceptó la clave. Revisa que la copiaste completa y que sigue activa.","err");}
+        if(res.status===429){return apiMsg("The Odds API dice que hiciste demasiadas consultas seguidas o se acabaron tus créditos. Espera un momento.","err");}
+        if(res.status===404||res.status===422){return apiMsg("The Odds API no tiene esta liga ("+esc(sport)+") o no acepta la consulta.","err");}
+        if(!res.ok){return apiMsg("The Odds API respondió con un error ("+res.status+"). Intenta más tarde.","err");}
+        const rem=res.headers.get("x-requests-remaining"), data=await res.json();
+        c={ts:Date.now(),remaining:rem,events:(Array.isArray(data)?data:[]).map(compactApiEvent)};
+        cache[sport]=c; writeApiCache(cache);
+      }
+    }
+    apiRemTxt(c);
+    const fx0=(DATA.fixtures||[]).find(f=>f.lg===league&&f.h===h&&f.a===a&&!f.score);
+    const hit=findApiEvent(c.events,h,a,fx0?Date.parse(fx0.date+":00-06:00"):0);
+    if(!hit)return apiMsg(`No encontré <b>${esc(h)} vs ${esc(a)}</b> entre los ${c.events.length} partidos con cuotas de The Odds API (${used==="cache"?"guardados "+agoTxt(c.ts):used==="stale"?"guardados "+agoTxt(c.ts)+", sin conexión":"recién cargados"}). Puede que todavía no tenga cuotas o que el partido ya empezó.`,"err");
+    const o=Object.assign({},hit.ev.odds);
+    if(hit.flip){const t=o["1"];o["1"]=o["2"];o["2"]=t;}      // la API tiene a los equipos en el orden contrario
+    if(!Object.keys(o).length)return apiMsg("The Odds API tiene el partido pero sin cuotas de resultado ni de goles por ahora.","err");
+    const merged=Object.assign({},fx0&&fx0.odds,o), ml=mlFromOdds(merged);
+    apiStore[league+"|"+h+"|"+a]={odds:o,ml:ml,src:hit.ev.src,date:new Date(Date.parse(hit.ev.t)-6*3600e3).toISOString().slice(0,16)};
+    render();
+    const lines=[1.5,2.5,3.5].filter(x=>o["o:goals:"+x]).join(", ");
+    apiMsg(`<b>✔ Cuotas cargadas</b> (${esc(hit.ev.src)}): resultado${lines?" y goles (líneas "+lines+")":""}. `+(used==="cache"?`Salen de lo guardado ${agoTxt(c.ts)}, así que no gastó créditos. <button class="linkb" id="apiForce" type="button">Actualizar ahora (gasta 2)</button>`:used==="stale"?`Sin conexión: uso lo guardado ${agoTxt(c.ts)}.`:"Consulta nueva.")+`<br>Las probabilidades ahora salen de estas cuotas, así que la ganancia esperada sale casi siempre negativa: es el margen de la casa. Escribe la cuota de tu casa en cada fila para ver si paga mejor.`,"ok");
+  }finally{btn.disabled=false; btn.textContent="🔄 Cargar cuotas del mercado";}
+}
+$("apiLoad").addEventListener("click",()=>apiLoad(false));
+$("apiSt").addEventListener("click",ev=>{if(ev.target.id==="apiForce")apiLoad(true);});
+$("apiSave").addEventListener("click",()=>{
+  const v=$("apiKey").value.trim();
+  if(!/^[A-Za-z0-9]{16,64}$/.test(v)){$("apiKeySt").textContent="Esa clave no parece válida: son solo letras y números, sin espacios."; return;}
+  setApiKey(v); $("apiKey").value=""; keyStTxt(); $("apiBox").open=false;
+});
+$("apiDel").addEventListener("click",()=>{setApiKey(""); $("apiKey").value=""; writeApiCache({}); apiStore={}; keyStTxt(); apiMsg("",""); apiRemTxt(null);});
+keyStTxt(); { const c0=readApiCache(), ks=Object.keys(c0); if(ks.length){const last=ks.map(k=>c0[k]).sort((x,y)=>y.ts-x.ts)[0]; apiRemTxt(last);} }
+
 /* ---------- pantalla del partido ---------- */
 function updTxt(){
   const L=DATA.leagues[league];
@@ -2404,7 +2536,9 @@ function render(){
   updTxt();
   if(h===a)return;
   const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
-  const fxs=(DATA.fixtures||[]).filter(f=>f.lg===league&&f.h===h&&f.a===a), fx=fxs.find(f=>!f.score)||fxs[0];
+  const fxs=(DATA.fixtures||[]).filter(f=>f.lg===league&&f.h===h&&f.a===a), fx0=fxs.find(f=>!f.score)||fxs[0];
+  const af=apiStore[league+"|"+h+"|"+a]&&!(fx0&&fx0.score)?apiStore[league+"|"+h+"|"+a]:null;     // cuotas cargadas desde The Odds API (solo en memoria; no tocan DATA)
+  const fx=af?Object.assign({},fx0||{lg:league,h:h,a:a,date:af.date,status:"NS"},{odds:Object.assign({},fx0&&fx0.odds,af.odds),ml:af.ml||(fx0&&fx0.ml)||null}):fx0;
   const fin=fx&&fx.score;
   const mk0=league+"|"+h+"|"+a; if(mk0!==userMatch){userOdds={};userMatch=mk0;}
   const uml=mlFromOdds(userOdds);
@@ -2478,7 +2612,7 @@ function render(){
     if(v!==undefined){$("o"+i).value=v;onOdds(i);}
   });
   bankMsg();
-  $("oddsSrc").textContent=(n?`Cargamos ${n} cuotas automáticamente (promedio de varias casas). Cámbialas por las de tu casa. `:"")+"Cuota justa: la mínima para que valga la pena. Número verde o rojo: lo que ganarías o perderías en promedio por cada L 1 si el modelo acertara.";
+  $("oddsSrc").textContent=(af?`Cuotas cargadas con The Odds API (${af.src}). Cámbialas por las de tu casa. `:n?`Cargamos ${n} cuotas automáticamente (promedio de varias casas). Cámbialas por las de tu casa. `:"")+"Cuota justa: la mínima para que valga la pena. Número verde o rojo: lo que ganarías o perderías en promedio por cada L 1 si el modelo acertara.";
 }
 
 /* ---------- pantallas ---------- */
