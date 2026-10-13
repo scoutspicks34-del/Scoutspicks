@@ -981,7 +981,7 @@ def build(template, out_path="docs/index.html"):
     log(f"Página escrita en {out_path} ({len(html) // 1024} KB)")
 
 
-TEMPLATE = r'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><style>:root{color-scheme:dark}html,body{margin:0;background:#000}</style>
+TEMPLATE = r'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Picks Fresh"><meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="format-detection" content="telephone=no"><style>:root{color-scheme:dark}html,body{margin:0;background:#000}</style>
 <title>Picks Fresh</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Figtree:wght@400;500;600;700&display=swap">
@@ -1012,6 +1012,10 @@ button{cursor:pointer}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 0 12px}
 .brand{display:flex;align-items:center;gap:10px;font:800 26px/1 var(--disp);font-stretch:72%;white-space:nowrap;flex:none}
 .brand svg{flex:none}
+.inst{display:flex;align-items:center;gap:10px;padding:10px 14px;padding-top:max(10px,env(safe-area-inset-top));background:var(--good-bg);border-bottom:1px solid var(--good);color:var(--ink);font-size:13.5px;line-height:1.35}
+.inst[hidden]{display:none}
+.inst .it{flex:1;min-width:0} .inst .it b{display:block;font-size:14px} .inst .it span{color:var(--chalk2)}
+.inst .btn{flex:none;padding:8px 14px} .inst .ix{flex:none;background:none;border:0;color:var(--ink);font:400 26px/1 var(--body);padding:2px 8px;cursor:pointer}
 .upd{font-size:11.5px;line-height:1.3;color:var(--muted);text-align:right;min-width:0}
 
 /* ---- liga y día ---- */
@@ -1288,6 +1292,7 @@ ul.exp b{font-weight:800}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head><body>
+<div class="inst" id="inst" hidden role="region" aria-label="Instalar la app"><div class="it"><b>Instala Picks Fresh como app</b><span id="instTxt"></span></div><button class="btn" id="instBtn" type="button" hidden>Instalar</button><button class="ix" id="instX" type="button" aria-label="Cerrar">×</button></div>
 <div class="app">
   <header class="bar">
     <div class="brand"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="8" fill="#0d3a2c"/><path d="M15 5v20" stroke="#f4f7f2" stroke-width="1.8"/><circle cx="15" cy="15" r="5.2" fill="none" stroke="#f4f7f2" stroke-width="1.8"/><circle cx="15" cy="15" r="1.8" fill="#f2b632"/></svg>Picks Fresh</div>
@@ -1337,7 +1342,7 @@ ul.exp b{font-weight:800}
       <div class="box"><div class="stats" id="stats"></div></div>
       <div class="box" style="padding-top:6px"><div class="log" id="log"></div></div>
       <div class="row"><button class="btn ghost" id="copy" type="button">Copiar bitácora</button><span class="sub" id="copyMsg"></span></div>
-      <p class="foot">La bitácora se guarda solo en este navegador. Si borras los datos del sitio se pierde, así que copia el texto de vez en cuando.</p>
+      <p class="foot">La bitácora se guarda solo en este navegador. Si borras los datos del sitio se pierde, así que copia el texto de vez en cuando. Si la instalas como app, la app guarda su propia bitácora (en iPhone es distinta a la de Safari), así que copia la de Safari antes de instalarla si ya tienes apuestas anotadas.</p>
     </section>
 
     <!-- DETALLE DEL PARTIDO -->
@@ -2311,6 +2316,32 @@ $("copy").addEventListener("click",()=>{
 
 league=((DATA.fixtures||[]).find(f=>!f.score)||(DATA.fixtures||[])[0]||{}).lg||Object.keys(DATA.leagues)[0];
 tabs(); fillTeams(); updTxt(); fxList(); renderFeat(); renderLog(); setView("list");
+</script>
+<script>
+/* App instalable (PWA): service worker + aviso de instalación (Android: botón; iPhone/iPad: pasos de Safari) */
+(function(){
+  try{if("serviceWorker" in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){});});}catch(e){}
+  var box=document.getElementById("inst"); if(!box)return;
+  var KEYX="pf_inst_x", standalone=false, ios=false, closed=false;
+  try{standalone=(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone===true;}catch(e){}
+  try{ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);}catch(e){}
+  try{closed=localStorage.getItem(KEYX)==="1";}catch(e){}
+  if(standalone||closed)return;
+  var txt=document.getElementById("instTxt"), btn=document.getElementById("instBtn"), dp=null;
+  function show(){box.hidden=false;}
+  document.getElementById("instX").addEventListener("click",function(){box.hidden=true;try{localStorage.setItem(KEYX,"1");}catch(e){}});
+  if(ios){
+    txt.textContent="En Safari toca el botón Compartir (el cuadro con la flecha) y elige \"Añadir a pantalla de inicio\".";
+    show();
+  }
+  window.addEventListener("beforeinstallprompt",function(ev){
+    ev.preventDefault(); dp=ev; txt.textContent="Ábrela desde tu pantalla de inicio, a pantalla completa y más rápido."; btn.hidden=false; show();
+  });
+  btn.addEventListener("click",function(){
+    if(!dp)return; dp.prompt(); dp.userChoice.then(function(){dp=null;box.hidden=true;},function(){});
+  });
+  window.addEventListener("appinstalled",function(){box.hidden=true;});
+})();
 </script>
 
 </body></html>
