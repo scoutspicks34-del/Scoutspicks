@@ -1182,6 +1182,7 @@ ul.exp b{font-weight:800}
 .ev .evr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"t p" "c p";gap:2px 12px;align-items:center;padding:9px 0;border-top:1px solid var(--line);font-size:15px}
 .ev .evg{margin-top:14px;font:700 12px/1.2 var(--body);letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .ev .evr .evt{grid-area:t} .ev .evr .evc{grid-area:c} .ev .evr .evp{grid-area:p;font-size:22px;text-align:right}
+.exp .exs{display:block;margin-top:3px;padding-left:2px;color:var(--muted);font-size:13.5px;line-height:1.4}
 .evt i{font-style:normal;color:var(--muted);font-size:13.5px}
 .evc{font:700 15px/1.2 var(--body);color:var(--ink);text-align:left}
 .ev .evg{text-align:left}
@@ -1545,9 +1546,8 @@ function expectHtml(h,a,c,fin){
   const gtype=c.o25>=0.60?"partido abierto":c.o25<=0.40?"partido cerrado":"partido equilibrado en goles";
   if(gl)li.push(`<li><b>Goles:</b> se espera un ${gtype} (~${(c.lh+c.la).toFixed(1)} goles). Línea sugerida: ${gl.pk.lbl} ${pcTag(gl.pk.p)}.${gl.sf?` Más segura: ${gl.sf.lbl} ${pcTag(gl.sf.p)}.`:""}</li>`);
   const bt=c.bt, yes=bt>=0.5, pl=yes?bt:1-bt;
-  const bform=t=>{const sr=seriesFor(t,league==="ucl"?"ucl":"all",10); if(!sr||!sr.ok)return null; const r=sr.ms.map(nrm).map(m=>m.f>0&&m.c>0); return r.length>=4?{t:t,x:r.filter(Boolean).length,n:r.length}:null;};
-  const bf=[bform(h),bform(a)].filter(Boolean), bfTxt=bf.length?` En sus últimos partidos, anotaron los dos en ${bf.map(z=>`${z.x} de ${z.n} de ${esc2(z.t)}`).join(" y ")}.`:"";
-  li.push(`<li><b>Ambos anotan:</b> ${pl>=0.65?(yes?"es probable que los dos marquen":"es probable que al menos uno no marque"):pl>=0.57?`ligera ventaja para "${yes?"sí":"no"}", sin ser una opción clara`:"muy parejo, sin ventaja clara"}. Sí ${pcTag(bt)} · No ${pcTag(1-bt)}.${bfTxt}</li>`);
+  const bform=t=>{const sr=seriesFor(t,"all",10); if(!sr||!sr.ok)return `${esc2(t)} sin datos`; const r=sr.ms.map(nrm).map(m=>m.f>0&&m.c>0); return `${esc2(t)} <b>${r.filter(Boolean).length} de ${r.length}</b>`;};
+  li.push(`<li><b>Ambos anotan:</b> ${pl>=0.65?(yes?"es probable que los dos marquen":"es probable que al menos uno no marque"):pl>=0.57?`ligera ventaja para "${yes?"sí":"no"}", sin ser una opción clara`:"muy parejo, sin ventaja clara"} (Sí ${pcTag(bt)} · No ${pcTag(1-bt)}).<span class="exs">↳ Historial últimos 10 (partidos donde anotaron los dos): ${bform(h)} · ${bform(a)}.</span></li>`);
   const mk=c.mk||{}, band=(arr)=>arr.filter(x=>x.p>=0.65&&x.p<=0.85).sort((u,v)=>Math.abs(u.p-0.75)-Math.abs(v.p-0.75))[0]||null;
   const one=(k,nm,hiTot)=>{              // mejor "más de" y mejor "menos de" entre 65% y 85% (la más cercana a 75%)
     const M=mk[k]; if(!M)return null;
