@@ -6,16 +6,14 @@ H = {"User-Agent": "Mozilla/5.0"}
 FD = "https://www.football-data.co.uk/"
 ESPN = "https://site.api.espn.com/apis/site/v2/sports/soccer/"
 TS = "https://www.thesportsdb.com/api/v1/json/3/"
-URLS = [FD + "mmz4281/2627/N1.csv", FD + "mmz4281/2526/N1.csv", FD + "new/NOR.csv", FD + "new/USA.csv", FD + "new/MEX.csv",
-        FD + "fixtures.csv", FD + "new_league_fixtures.csv", FD + "new/SAU.csv"]
-for sl in ["ned.1", "nor.1", "ksa.1", "usa.1", "mex.1"]:
-    URLS += [ESPN + sl + "/scoreboard?dates=20261011", ESPN + sl + "/scoreboard?dates=20261016",
-             ESPN + sl + "/scoreboard?dates=20260801-20261012", ESPN + sl + "/scoreboard?dates=20260801-20261012&limit=1000",
-             "https://site.api.espn.com/apis/v2/sports/soccer/" + sl + "/standings"]
-for c in ["Norway", "Netherlands", "Saudi Arabia", "USA", "Mexico"]:
-    URLS.append(TS + "search_all_leagues.php?c=" + c.replace(" ", "%20") + "&s=Soccer")
-for i in [4337, 4350, 4346, 4668, 4358, 4359]:
-    URLS += [TS + f"lookupleague.php?id={i}", TS + f"eventsseason.php?id={i}&s=2026", TS + f"eventsseason.php?id={i}&s=2025-2026", TS + f"eventspastleague.php?id={i}", TS + f"eventsnextleague.php?id={i}"]
+ESPN2 = "https://site.api.espn.com/apis/site/v2/sports/soccer/"
+URLS = [ESPN2 + "ksa.1/scoreboard?dates=20261005-20261011", ESPN2 + "ksa.1/scoreboard?dates=20260901-20261011", ESPN2 + "ksa.1/scoreboard?dates=20260801-20261011",
+        ESPN2 + "ksa.1/scoreboard?dates=2026", ESPN2 + "ksa.1/scoreboard?season=2025&limit=500", ESPN2 + "ksa.1/scoreboard?dates=20260315-20260321&limit=100",
+        ESPN2 + "ksa.1/teams", ESPN2 + "ksa.1/scoreboard?dates=20260215",
+        "https://sports.core.api.espn.com/v2/sports/soccer/leagues/ksa.1/seasons/2025/types/1/events?limit=1000",
+        "https://sports.core.api.espn.com/v2/sports/soccer/leagues/ksa.1/seasons",
+        "https://site.api.espn.com/apis/site/v2/sports/soccer/ksa.1/teams/18267/schedule?season=2025",
+        "https://site.web.api.espn.com/apis/v2/sports/soccer/ksa.1/standings?season=2025"]
 out = {}
 for u in URLS:
     r = {}
@@ -47,4 +45,4 @@ for u in URLS:
         r["error"] = str(e)[:200]
     out[u] = r
     print(u, r.get("status"), r.get("bytes"), r.get("error", ""), flush=True)
-json.dump(out, open("data/diag.json", "w"), ensure_ascii=False, indent=1)
+json.dump(out, open("data/diag2.json", "w"), ensure_ascii=False, indent=1)
