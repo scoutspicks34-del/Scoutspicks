@@ -1568,7 +1568,7 @@ function expectHtml(h,a,c,fin){
   }
   return `<div class="exptit">📌 Resumen de tendencias para este partido</div>
     <ul class="exp">${li.join("")}</ul>
-    <div class="sub" style="margin-top:12px">En goles, la línea sugerida es la que el modelo ubica entre 65% y 75% (si ninguna cae ahí, la más cercana por encima). En córners y tiros muestro la mejor línea de \"más de\" y de \"menos de\" entre 65% y 85%, la más cercana a 75%; si el partido promete muchos córners (9.5 o más) o tiros (25 o más), va primero la de \"más de\". Son probabilidades, no garantías. ${c.mk&&Object.keys(c.mk).length?"De córners y tiros no tenemos cuotas para saber si pagan bien.":""}</div>`;
+    <div class="sub" style="margin-top:12px">En goles, la línea sugerida es la que el modelo ubica entre 65% y 75% (si ninguna cae ahí, la más cercana por encima). ${co||sh||so?`En córners y tiros muestro la mejor línea de \"más de\" y de \"menos de\" entre 65% y 85%, la más cercana a 75%; si el partido promete muchos córners (9.5 o más) o tiros (25 o más), va primero la de \"más de\". `:""}Son probabilidades, no garantías. ${co||sh||so?"De córners y tiros no tenemos cuotas para saber si pagan bien.":""}</div>`;
 }
 
 /* ---------- clasificación ---------- */
@@ -1643,7 +1643,14 @@ function fillTeams(){
   const pref=first?[first.h,first.a]:[L.teams[0],L.teams[1]];
   $("home").value=pref[0]; $("away").value=pref[1];
 }
-function formHtml(t){return (DATA.leagues[league].form[t]||"").split("").map(c=>`<i class="${c}">${c}</i>`).join("");}
+function formHtml(t){
+  let f=(DATA.leagues[league].form||{})[t]||"";
+  if(!f&&league==="ucl"){                    // Champions: últimos 5 oficiales (liga local + Champions)
+    const sr=seriesFor(t,"all",5);
+    if(sr.ok)f=sr.ms.slice().reverse().map(m=>{const x=m.home?m.hg:m.ag,y=m.home?m.ag:m.hg;return x>y?"G":x===y?"E":"P";}).join("");
+  }
+  return f.split("").filter(Boolean).map(c=>`<i class="${c}">${c}</i>`).join("");
+}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 function injHtml(h,a){
   const L=DATA.leagues[league];
@@ -1692,7 +1699,7 @@ function ymd(n){const y=Math.floor(n/10000),m=Math.floor(n/100)%100,d=n%100;retu
 /* ---------- historial: partidos de liga y de Champions ---------- */
 function scTxt(){
   const n=win;
-  return {all:"Últimos "+n+" partidos de liga de cada equipo, jugados de local y de visita.",
+  return {all:league==="ucl"?"Últimos "+n+" partidos oficiales de cada equipo, con su liga local y la Champions League juntas.":"Últimos "+n+" partidos de liga de cada equipo, jugados de local y de visita.",
     home:"Últimos "+n+" partidos de liga en los que cada equipo jugó de local.",
     away:"Últimos "+n+" partidos de liga en los que cada equipo jugó de visita.",
     ucl:"Últimos "+n+" partidos de Champions League de cada equipo, con las rondas previas. Hay datos de 2024/25, 2025/26 y la jornada 1 de 2026/27."}[scope];
@@ -1730,6 +1737,11 @@ function seriesFor(team,sc,n){
   if(sc==="ucl"){
     const c=uclName(team), ms=c?uclMatches(c,n):[];
     return ms.length?{ok:true,name:c,ms:ms}:{ok:false,msg:"No jugó la Champions League (ni sus rondas previas) en las últimas dos temporadas."};
+  }
+  if(league==="ucl"&&sc==="all"){          // en un partido de Champions, "Todos" junta su liga local y la Champions
+    const c=uclName(team), res0=resolveHist(team);
+    const ms=((res0?domMatches(res0,n,"all"):[]).concat(c?uclMatches(c,n):[])).sort((x,y)=>y.d-x.d).slice(0,n);
+    if(ms.length)return {ok:true,name:c||res0.name,ms:ms,mixed:true};
   }
   const res=resolveHist(team);
   if(!res)return {ok:false,msg:"No tenemos su historial de liga. Solo hay datos de Bundesliga, Premier League y La Liga."};
@@ -1776,7 +1788,7 @@ function renderHist(h,a){
   $("scopeH").innerHTML=scopeHtml();
   $("teamSw").innerHTML=[["h",h],["a",a]].map(([k,t])=>`<button type="button" data-ht="${k}" aria-pressed="${k===histTeam}">${esc(t)}</button>`).join("");
   const col=(team,role,s)=>`<section class="box tcard" data-t="${role}"><h3>${esc(team)}<span class="role">${role==="h"?"Local en este partido":"Visitante en este partido"}</span></h3>${
-    s.ok?(s.local?`<div class="sub">Sus partidos de liga local (no incluye Champions).</div>`:"")+sumHtml(s.ms)+`<div>${s.ms.map(m=>matchRow(m,s.name)).join("")}</div>`
+    s.ok?(s.mixed?`<div class="sub">Liga local y Champions juntas, del más reciente al más antiguo.</div>`:s.local?`<div class="sub">Sus partidos de liga local (no incluye Champions).</div>`:"")+sumHtml(s.ms)+`<div>${s.ms.map(m=>matchRow(m,s.name)).join("")}</div>`
         :`<div class="empty">${esc(s.msg)}</div>`}</section>`;
   $("hist").className="hgrid show-"+histTeam;
   $("hist").innerHTML=col(h,"h",seriesFor(h,scope))+col(a,"a",seriesFor(a,scope));
@@ -2107,6 +2119,7 @@ function setView(v){
   window.scrollTo(0,0);
 }
 function setTab(t){
+  if(oddsDirty&&view==="match"&&t!==tab){oddsDirty=false;render();}   // al cambiar de pestaña, se recalculan las probabilidades con las cuotas escritas
   tab=t;
   document.querySelectorAll("#mTabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===t?"true":"false"));
   [["sum","pSum"],["hist","pHist"],["trend","pTrend"],["table","pTable"],["mk","pMk"]].forEach(([k,id])=>{$(id).hidden=k!==t;});
@@ -2115,7 +2128,10 @@ function setTab(t){
 }
 function openMatch(h,a,t){
   $("home").value=h; $("away").value=a; $("adjH").value="0"; $("adjA").value="0";
-  histTeam="h"; scope=league==="ucl"?"ucl":"all";
+  histTeam="h";
+  // Champions: si algún equipo tiene menos de 4 partidos de Champions en los datos, se abre en "Todos" (liga local + Champions)
+  const nU=t=>{const c=uclName(t);return c?uclMatches(c,4).length:0;};
+  scope=league==="ucl"&&nU(h)>=4&&nU(a)>=4?"ucl":"all";
   render(); setTab(t||"sum"); setView("match");
   try{history.pushState({m:1},"");}catch(e){}
 }
@@ -2164,17 +2180,25 @@ $("pTrend").addEventListener("click",ev=>{
   redrawStats();
 });
 $("adjH").addEventListener("change",render); $("adjA").addEventListener("change",render);
+/* Cuotas de Resumen <-> Tu cuota de Apostar: se copian al instante (no hace falta salir del campo) */
+const SYNC={"1":"ou1","X":"ouX","2":"ou2","o:goals:2.5":"ouO","u:goals:2.5":"ouU"};
+let oddsDirty=false;
 $("pSum").addEventListener("input",ev=>{
   const k=ev.target.dataset&&ev.target.dataset.k; if(!k)return;
   const v=parseFloat(ev.target.value.replace(",","."));
   if(v>1)userOdds[k]=v; else delete userOdds[k];
+  oddsDirty=true;
+  const i=cur?cur.rows.findIndex(r=>r.key===k):-1, el=i>=0?$("o"+i):null;
+  if(el){el.value=ev.target.value; onOdds(i);}
 });
 $("pSum").addEventListener("change",ev=>{if(ev.target.dataset&&ev.target.dataset.k)render();});
 $("mk").addEventListener("input",ev=>{
   if(ev.target.dataset.i===undefined||ev.target.tagName!=="INPUT")return;
   const i=+ev.target.dataset.i, v=parseFloat(ev.target.value.replace(",","."));
-  if(v>1)userOdds[rowKey(cur.rows[i])]=v; else delete userOdds[rowKey(cur.rows[i])];
+  const rk=rowKey(cur.rows[i]);
+  if(v>1)userOdds[rk]=v; else delete userOdds[rk];
   onOdds(i);
+  if(SYNC[rk]){oddsDirty=true; $(SYNC[rk]).value=ev.target.value;}
 });
 $("mk").addEventListener("change",ev=>{
   if(ev.target.dataset.i===undefined||ev.target.tagName!=="INPUT")return;
