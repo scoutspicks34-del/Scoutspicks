@@ -1439,6 +1439,9 @@ ul.exp b{font-weight:800}
 .bankrow .cur{font:800 18px/1 var(--disp);color:var(--muted)}
 .bankrow input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:18px;font-weight:700;background:var(--paper)}
 .bankk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--muted)}
+.nav button{min-width:0}
+#pRes .mrow{border-top:1px solid var(--line)} #pRes .mrow:first-of-type{border-top:0}
+#vProps .box>.f+.pick{margin-top:12px}
 .stk{margin-top:7px;font-size:14px;line-height:1.35}
 .stk b{font-weight:800}
 .stk.yes b{color:var(--good)} .stk.no{color:var(--muted)}
@@ -1464,7 +1467,7 @@ ul.exp b{font-weight:800}
 
 /* ---- navegación inferior ---- */
 .nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--paper);border-top:1px solid var(--line);padding:6px 12px calc(6px + env(safe-area-inset-bottom))}
-.nav .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.nav .in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
 .nav button{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;border-radius:12px;padding:7px 4px;font-size:13px;font-weight:700;color:var(--muted)}
 .nav button[aria-current="page"]{color:var(--ink);background:var(--soft)}
 .nav svg{width:24px;height:24px}
@@ -1534,6 +1537,36 @@ ul.exp b{font-weight:800}
       <div class="box" style="padding-top:6px"><div class="log" id="log"></div></div>
       <div class="row"><button class="btn ghost" id="copy" type="button">Copiar bitácora</button><span class="sub" id="copyMsg"></span></div>
       <p class="foot">La bitácora se guarda solo en este navegador. Si borras los datos del sitio se pierde, así que copia el texto de vez en cuando. Si la instalas como app, la app guarda su propia bitácora (en iPhone es distinta a la de Safari), así que copia la de Safari antes de instalarla si ya tienes apuestas anotadas.</p>
+    </section>
+
+    <!-- CALCULADORA PROPS -->
+    <section id="vProps" aria-label="Calculadora de props" hidden>
+      <div class="vh"><h2>Calculadora Props</h2></div>
+      <div class="sub">Para tiros, remates, goles de un jugador o córners. Escribe tu promedio esperado y la línea de la casa. Usa la distribución de Poisson y no depende de ningún partido.</div>
+      <div class="bank">
+            <label>Bankroll (Saldo total):</label>
+            <div class="bankrow"><span class="cur">L</span><input class="bankIn" inputmode="decimal" placeholder="Ej. 5000" autocomplete="off" aria-label="Bankroll, saldo total disponible en lempiras"></div>
+            <div class="bankk" role="group" aria-label="Fracción de Kelly"><span>Kelly fraccional:</span><button class="chip" type="button" data-k="25" aria-pressed="true">25%</button><button class="chip" type="button" data-k="30" aria-pressed="false">30%</button></div>
+            <div class="sub bankTxt"></div>
+          </div>
+      <div class="box">
+        <label class="f">Nombre / Mercado<input class="in" id="pName" type="text" placeholder="Ej. Tiros de Olise" autocomplete="off"></label>
+        <div class="pick">
+          <label class="f">Promedio esperado<input class="in" id="pAvg" inputmode="decimal" placeholder="Ej. 2.5" autocomplete="off"></label>
+          <label class="f">Línea de la casa<input class="in" id="pLine" inputmode="decimal" placeholder="Ej. 1.5" autocomplete="off"></label>
+        </div>
+        <div class="sub" id="pMsg" style="margin-top:10px">Escribe el promedio por partido y la línea (1.5, 2.5…) para ver las probabilidades.</div>
+        <div id="pRes" hidden>
+          <div class="mrow" id="pr_o"></div>
+          <div class="mrow" id="pr_u"></div>
+          <div class="sub" id="pPush"></div>
+        </div>
+      </div>
+      <div class="box how"><details><summary>Cómo se calcula y qué limita</summary>
+        <p>Menos de la línea = suma de las probabilidades exactas de 0, 1, 2… hasta el entero por debajo de la línea. Más de la línea = 100% menos eso. Con una línea entera (por ejemplo 2) hay devolución si sale justo ese número: se calcula aparte y la cuota justa ya la descuenta.</p>
+        <p>El promedio es tuyo: la calculadora no lo verifica ni lo ajusta por rival, minutos o alineación. Si el promedio está mal, todo lo demás también.</p>
+        <p>Poisson supone que los eventos son independientes. Los tiros y córners suelen variar más que eso, así que Poisson tiende a dar de menos las cifras muy altas y muy bajas. Es una estimación sin validar con partidos pasados.</p>
+      </details></div>
     </section>
 
     <!-- DETALLE DEL PARTIDO -->
@@ -1641,11 +1674,11 @@ ul.exp b{font-weight:800}
       <div class="pane" id="pMk" hidden>
         <div class="box">
           <h3>Mercados y cuotas</h3>
-          <div class="bank" id="bank">
-            <label for="bankIn">Bankroll (Saldo total):</label>
-            <div class="bankrow"><span class="cur">L</span><input id="bankIn" inputmode="decimal" placeholder="Ej. 5000" autocomplete="off" aria-label="Bankroll, saldo total disponible en lempiras"></div>
+          <div class="bank">
+            <label>Bankroll (Saldo total):</label>
+            <div class="bankrow"><span class="cur">L</span><input class="bankIn" inputmode="decimal" placeholder="Ej. 5000" autocomplete="off" aria-label="Bankroll, saldo total disponible en lempiras"></div>
             <div class="bankk" role="group" aria-label="Fracción de Kelly"><span>Kelly fraccional:</span><button class="chip" type="button" data-k="25" aria-pressed="true">25%</button><button class="chip" type="button" data-k="30" aria-pressed="false">30%</button></div>
-            <div class="sub" id="bankTxt"></div>
+            <div class="sub bankTxt"></div>
           </div>
           <div class="callout" style="margin-top:8px"><b>El modelo no supera a las casas de apuestas.</b> Úsalo como referencia. Una ganancia esperada positiva no es una señal de compra.</div>
           <div class="sub" style="margin-top:10px">Escribe la cuota de tu casa en una fila y toca Anotar para guardarla en la bitácora.</div>
@@ -1667,6 +1700,7 @@ ul.exp b{font-weight:800}
   <button type="button" data-v="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 16.4 6.6 19.5l1.2-6L3.3 9.3l6.1-.7z"/></svg>Destacados</button>
   <button type="button" data-v="table"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg>Tabla</button>
   <button type="button" data-v="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z"/><path d="M6 3v18M10 8h6M10 12h6"/></svg>Bitácora</button>
+  <button type="button" data-v="props"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Props</button>
 </div></nav>
 <script>
 const DATA = __PARAMS__;
@@ -2256,9 +2290,10 @@ let bank={v:0,k:25};
 try{const o=JSON.parse(localStorage.getItem(KEYB)||"{}"); if(o.v>0)bank.v=o.v; if(o.k===30)bank.k=30;}catch(e){}
 function saveBank(){try{localStorage.setItem(KEYB,JSON.stringify(bank));}catch(e){}}
 function lps(x){return "L "+Math.round(x).toLocaleString("en-US");}
-function stakeHtml(p,v){
-  const ev=p*v-1;
-  if(!(ev>0))return {cls:"stk no",html:"Stake sugerido: <b>L 0 (No apostar)</b>"};
+function stakeHtml(p,v,push){
+  push=push||0;                                          // probabilidad de devolución (líneas enteras en Props)
+  const ev=p*(v-1)-(1-p-push);                           // sin devolución es p·cuota − 1
+  if(!(ev>1e-12))return {cls:"stk no",html:"Stake sugerido: <b>L 0 (No apostar)</b>"};
   const f=(ev/(v-1))*(bank.k/100);                       // fracción del bankroll
   const pc=(f*100).toFixed(f<0.01?2:1)+"% del bankroll";
   if(!(bank.v>0))return {cls:"stk yes",html:`Stake sugerido: <b>${pc}</b><small>Escribe tu bankroll arriba para verlo en lempiras.</small>`};
@@ -2266,21 +2301,27 @@ function stakeHtml(p,v){
   return {cls:"stk yes",html:`Stake sugerido: <b>${m<0.5?"menos de L 1":lps(m)}</b><small>${pc} · Kelly ${bank.k}%</small>`};
 }
 function bankMsg(){
-  $("bankTxt").textContent=bank.v>0?"Con L "+Math.round(bank.v).toLocaleString("en-US")+" y Kelly al "+bank.k+"%, el stake de cada fila sale de su probabilidad y su cuota. Es una referencia, no una garantía: el modelo no supera a las casas, y si su probabilidad falla, Kelly apuesta de más.":"Escribe tu saldo para ver cuánto apostar en cada fila con ganancia esperada positiva. Si la ganancia esperada es negativa, el stake es L 0.";
+  const t=bank.v>0?"Con L "+Math.round(bank.v).toLocaleString("en-US")+" y Kelly al "+bank.k+"%, el stake sale de la probabilidad y la cuota de cada fila. Es una referencia, no una garantía: si la probabilidad falla, Kelly apuesta de más.":"Escribe tu saldo para ver cuánto apostar en cada fila con ganancia esperada positiva. Si la ganancia esperada es negativa, el stake es L 0.";
+  document.querySelectorAll(".bankTxt").forEach(e=>{e.textContent=t;});
+}
+function syncBankUI(src){
+  document.querySelectorAll(".bankIn").forEach(el=>{if(el!==src)el.value=bank.v>0?String(bank.v):"";});
+  document.querySelectorAll(".bank button[data-k]").forEach(x=>x.setAttribute("aria-pressed",String(+x.dataset.k===bank.k)));
 }
 function updStakes(){
   bankMsg();
   if(cur)cur.rows.forEach((r,i)=>{const el=$("o"+i); if(el&&parseFloat(el.value.replace(",","."))>1)onOdds(i);});
+  propCalc();
 }
-$("bankIn").value=bank.v>0?String(bank.v):"";
-$("bankIn").addEventListener("input",ev=>{const n=parseFloat(ev.target.value.replace(/[,\s]/g,"")); bank.v=n>0?n:0; saveBank(); updStakes();});
-$("bank").addEventListener("click",ev=>{
-  const b=ev.target.closest&&ev.target.closest("button[data-k]"); if(!b)return;
-  bank.k=+b.dataset.k; saveBank();
-  $("bank").querySelectorAll("button[data-k]").forEach(x=>x.setAttribute("aria-pressed",String(+x.dataset.k===bank.k)));
-  updStakes();
+document.addEventListener("input",ev=>{
+  if(!ev.target.classList||!ev.target.classList.contains("bankIn"))return;
+  const n=parseFloat(ev.target.value.replace(/[,\s]/g,"")); bank.v=n>0?n:0; saveBank(); syncBankUI(ev.target); updStakes();
 });
-$("bank").querySelectorAll("button[data-k]").forEach(x=>x.setAttribute("aria-pressed",String(+x.dataset.k===bank.k)));
+document.addEventListener("click",ev=>{
+  const b=ev.target.closest&&ev.target.closest(".bank button[data-k]"); if(!b)return;
+  bank.k=+b.dataset.k; saveBank(); syncBankUI(); updStakes();
+});
+syncBankUI(); bankMsg();
 function onOdds(i){
   const r=cur.rows[i], v=parseFloat($("o"+i).value.replace(",","."));
   const e=$("e"+i), b=$("b"+i), f=$("f"+i);
@@ -2297,6 +2338,60 @@ function onOdds(i){
   if(sk){const t=stakeHtml(r.p,v); sk.className=t.cls; sk.innerHTML=t.html;}
 }
 
+
+/* ---------- Calculadora Props (Poisson) ---------- */
+const numIn=el=>parseFloat(String(el.value).replace(",","."));
+function propSide(side,label,p,push,fairOdds){
+  return `<div class="mtop"><span class="ml">${esc(label)}</span><span class="mp" id="pp_${side}">${pct(p)}</span></div>
+    <div class="pbar"><i style="width:${(p*100).toFixed(0)}%"></i></div>
+    <div class="mbot"><span class="mf">Cuota justa ${f2(fairOdds)}</span><input inputmode="decimal" id="pi_${side}" data-side="${side}" placeholder="Tu cuota" aria-label="Tu cuota para ${esc(label)}"><span class="ev" id="pe_${side}" title="Ganancia esperada por cada L 1 apostado"></span><button class="mini" id="pa_${side}" data-side="${side}" disabled type="button">Anotar</button></div>
+    <div class="stk" id="ps_${side}"></div>`;
+}
+let prop=null;     // último cálculo válido: {name, mu, line, o:{p,label}, u:{p,label}, push}
+function propCalc(){
+  const mu=numIn($("pAvg")), line=numIn($("pLine")), msg=$("pMsg"), res=$("pRes");
+  const bad=t=>{prop=null; res.hidden=true; msg.textContent=t;};
+  if(!$("pAvg").value.trim()||!$("pLine").value.trim())return bad("Escribe el promedio por partido y la línea (1.5, 2.5…) para ver las probabilidades.");
+  if(!(mu>0)||mu>60)return bad("El promedio esperado debe ser un número mayor que 0 (y razonable, por ejemplo 2.5).");
+  if(!(line>0)||line>100||Math.abs(line*2-Math.round(line*2))>1e-9)return bad("La línea debe terminar en .5 o ser un número entero (por ejemplo 1.5 o 2). Las líneas de cuarto, como 1.25, no están soportadas.");
+  const half=Math.abs(line-Math.floor(line)-0.5)<1e-9, k=Math.floor(line);
+  const a=pois(mu,k+1);
+  const under=a.slice(0,half?k+1:k).reduce((x,y)=>x+y,0), push=half?0:a[k], over=Math.max(0,1-under-push);
+  if(!(over>1e-9&&under>1e-9))return bad("Con ese promedio y esa línea una de las dos opciones es casi imposible; revisa los números.");
+  const name=$("pName").value.trim()||"Prop sin nombre", ln=String(line);
+  const fair=(p)=>push>0?1+(1-p-push)/p:1/p;           // con devolución: p·(cuota−1) = prob. de perder
+  prop={name,mu,line,push,o:{p:over,label:"Más de "+ln},u:{p:under,label:"Menos de "+ln}};
+  msg.textContent=name+": promedio "+mu+", línea "+ln+". Probabilidades de Poisson.";
+  res.hidden=false;
+  // se vuelve a dibujar solo si cambia algo que afecta las probabilidades (así no se pierde el foco al escribir tu cuota)
+  const keep={o:$("pi_o")&&$("pi_o").value,u:$("pi_u")&&$("pi_u").value};
+  $("pr_o").innerHTML=propSide("o",prop.o.label,over,push,fair(over)); $("pr_u").innerHTML=propSide("u",prop.u.label,under,push,fair(under));
+  ["o","u"].forEach(sd=>{if(keep[sd])$("pi_"+sd).value=keep[sd]; propOdds(sd);});
+  $("pPush").textContent=push>0?"Línea entera: si sale exactamente "+k+" ("+(push*100).toFixed(1)+"%), la casa devuelve la apuesta. La cuota justa ya lo descuenta. No se puede anotar en la bitácora porque ahí no existe la devolución.":"";
+}
+function propOdds(sd){
+  if(!prop)return;
+  const side=prop[sd], v=numIn($("pi_"+sd)), e=$("pe_"+sd), b=$("pa_"+sd), sk=$("ps_"+sd);
+  if(!(v>1)){e.textContent="";e.className="ev";sk.innerHTML="";sk.className="stk";b.disabled=true;return;}
+  const ev=side.p*(v-1)-(1-side.p-prop.push);
+  e.className="ev "+(ev>1e-12?"pos":"neg");
+  e.textContent=(ev>0?"+":"")+(ev*100).toFixed(1)+"%";
+  const t=stakeHtml(side.p,v,prop.push); sk.className=t.cls;
+  sk.innerHTML=t.html+(ev>0.25?`<span class="flag" style="margin-top:6px">Ganancia esperada muy alta: casi siempre significa que el promedio está mal estimado o que la casa tiene información que tú no (lesión, minutos, alineación). Revisa el promedio.</span>`:"");
+  b.disabled=prop.push>0;
+  b.title=prop.push>0?"Con línea entera hay devolución y la bitácora no la maneja":"";
+}
+["pName","pAvg"].forEach(id=>$(id).addEventListener("input",propCalc));
+$("pLine").addEventListener("input",()=>{["pi_o","pi_u"].forEach(id=>{const e=$(id); if(e)e.value="";}); propCalc();});   // otra línea = otras cuotas de la casa
+$("pRes").addEventListener("input",ev=>{if(ev.target.dataset.side)propOdds(ev.target.dataset.side);});
+$("pRes").addEventListener("click",ev=>{
+  const b=ev.target.closest("button[data-side]"); if(!b||b.disabled||!prop)return;
+  const sd=b.dataset.side, v=numIn($("pi_"+sd)); if(!(v>1))return;
+  const log=readLog();
+  log.unshift({id:Date.now(),d:new Date().toISOString().slice(0,10),lg:"Props",match:prop.name,mk:prop[sd].label+" (promedio "+prop.mu+")",odds:v,p:prop[sd].p,stake:1,st:"pending"});
+  writeLog(log); renderLog();
+  b.textContent="Anotada"; setTimeout(()=>{b.textContent="Anotar";},1500);
+});
 
 /* ---------- pantalla del partido ---------- */
 function updTxt(){
@@ -2407,7 +2502,7 @@ function fxList(){
 function setView(v){
   if(v!=="match")prevView=v;
   view=v;
-  [["list","vList"],["feat","vFeat"],["table","vTable"],["log","vLog"],["match","vMatch"]].forEach(([k,id])=>{$(id).hidden=k!==v;});
+  [["list","vList"],["feat","vFeat"],["table","vTable"],["log","vLog"],["props","vProps"],["match","vMatch"]].forEach(([k,id])=>{$(id).hidden=k!==v;});
   $("ctx").hidden=!(v==="list"||v==="feat"||v==="table");
   $("dayChips").hidden=v==="table"||!daysOfLeague().length;
   if(v==="table")renderTableView();

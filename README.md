@@ -33,3 +33,6 @@ Si cambias `sw.js`, sube el número de `V` para que los teléfonos descarten la 
 
 ## Calculadora de stake (pestaña Apostar)
 Kelly fraccional al 25% o 30%: `stake = bankroll × fracción × (p·cuota − 1) / (cuota − 1)`, con `p` la probabilidad de la fila. Si la ganancia esperada es ≤ 0 muestra "L 0 (No apostar)". El bankroll y la fracción se guardan solo en el navegador de cada persona.
+
+## Calculadora Props
+Pestaña "Props" (menú de abajo). Poisson con el promedio y la línea que escribes: Menos de = suma de P(0)…P(entero bajo la línea), Más de = 1 − Menos. Líneas enteras: la devolución se calcula aparte. Usa el mismo bankroll y Kelly que Apostar (se comparten).
