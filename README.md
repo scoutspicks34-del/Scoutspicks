@@ -20,3 +20,9 @@ y conviene regenerarlo una vez por temporada. `build.py` solo incrusta los parti
 La página se puede instalar como app en Android (botón "Instalar" o menú de Chrome) y en iPhone/iPad (Safari: Compartir → Añadir a pantalla de inicio).
 Archivos: `docs/manifest.webmanifest`, `docs/sw.js` (service worker: pide la página a internet y usa la última copia si no hay conexión) e `docs/icons/`.
 Si cambias `sw.js`, sube el número de `V` para que los teléfonos descarten la copia vieja.
+
+## Ligas nuevas (Holanda, Noruega, Arabia, MLS, Liga MX)
+- Eredivisie: football-data.co.uk (`N1`), con córners, tiros y tarjetas.
+- Noruega, MLS y Liga MX: archivos "new" de football-data.co.uk (solo goles y cuotas); los últimos días se completan con ESPN/TheSportsDB.
+- Arabia: ESPN (marcadores del año actual y los dos anteriores; copia en `data/espn_arabia.csv` por si ESPN falla). Sin cuotas.
+- El modelo de estas ligas no está validado con partidos pasados (`val: false`); la página lo avisa en "Cómo se calculó".

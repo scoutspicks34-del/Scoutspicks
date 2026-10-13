@@ -12,6 +12,12 @@ LEAGUES = {
     "bundesliga": dict(name="Bundesliga", code="D1", api=78),
     "premier": dict(name="Premier League", code="E0", api=39),
     "laliga": dict(name="La Liga", code="SP1", api=140),
+    # ligas nuevas: solo goles (y en Holanda también córners, tiros y tarjetas); el modelo no se ha validado con partidos pasados
+    "eredivisie": dict(name="Eredivisie (Holanda)", code="N1", api=88, tbl="euro", new=True),
+    "noruega": dict(name="Eliteserien (Noruega)", code="NOR", src="fdnew", cc="NOR", tbl="cal", new=True),
+    "arabia": dict(name="Liga de Arabia", code="KSA", src="espn", slug="ksa.1", tbl="euro", new=True),
+    "mls": dict(name="MLS (EE. UU.)", code="USA", src="fdnew", cc="USA", tbl="cal", new=True),
+    "ligamx": dict(name="Liga MX (México)", code="MEX", src="fdnew", cc="MEX", tbl="split", new=True),
 }
 BT_W = 0.5   # peso del modelo en "ambos anotan" (el resto va a la tasa histórica de la liga); ver prueba con partidos pasados
 REG_M = {"shots": 80.0}   # regularización por mercado (por defecto 40); tiros totales mejoró con 80 en la prueba con partidos pasados
@@ -49,7 +55,60 @@ def fetch_frames(code, seasons):
     return frames
 
 
-def prepare(frames):
+NEW_DIR = Path(__file__).parent / "data" / "raw"   # solo para pruebas sin internet
+
+
+def fetch_new(v, today, text=None):
+    """CSV de 'ligas extra' de football-data.co.uk (un archivo por país, todas las temporadas). Solo goles y cuotas de cierre."""
+    if text is None:
+        r = requests.get(f"https://www.football-data.co.uk/new/{v['cc']}.csv", timeout=60, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        text = r.content.decode("utf-8-sig", errors="replace")
+    d = pd.read_csv(io.StringIO(text))
+    d.columns = [str(c).strip() for c in d.columns]
+    d = d.rename(columns={"Home": "HomeTeam", "Away": "AwayTeam", "HG": "FTHG", "AG": "FTAG"})
+    if "League" in d.columns and len(d):
+        d = d[d.League == d.League.iloc[-1]]
+    d["Date"] = pd.to_datetime(d["Date"], dayfirst=True, errors="coerce")
+    d = d.dropna(subset=["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG"])
+    return [d[d.Date >= pd.Timestamp(today) - pd.Timedelta(days=1100)][["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG"]]]
+
+
+def espn_hist(key, v, today, evs=None):
+    """Historial de una liga que solo está en ESPN (Arabia): marcadores finales de este año y los dos anteriores. Si ESPN falla, usa la copia guardada."""
+    cache = Path(__file__).parent / "data" / f"espn_{key}.csv"
+    rows = []
+    if evs is None:
+        for yr in range(today.year - 2, today.year + 1):
+            js = _get_json("ESPN", f"https://site.api.espn.com/apis/site/v2/sports/soccer/{v['slug']}/scoreboard?dates={yr}&limit=1000")
+            if js:
+                rows += parse_espn(js)
+    else:
+        rows = evs
+    df = pd.DataFrame([{"Date": pd.to_datetime(str(r[0])), "HomeTeam": r[1], "AwayTeam": r[2], "FTHG": r[3], "FTAG": r[4]} for r in rows])
+    if len(df) >= 100:
+        try:
+            df.drop_duplicates(subset=["Date", "HomeTeam", "AwayTeam"]).to_csv(cache, index=False)
+        except Exception:  # noqa: BLE001
+            pass
+    elif cache.exists():
+        log(f"  ESPN {key}: no respondió bien, se usa la copia guardada")
+        df = pd.read_csv(cache, parse_dates=["Date"])
+    if not len(df):
+        raise RuntimeError("sin datos de ESPN")
+    return [df]
+
+
+def load_league(key, v, seasons, today):
+    src = v.get("src", "fd")
+    if src == "fd":
+        return prepare(manual_frames(v["code"]) + fetch_frames(v["code"], seasons), cal=v.get("tbl") == "cal")
+    if src == "fdnew":
+        return prepare(manual_frames(v["code"]) + fetch_new(v, today), cal=v.get("tbl") == "cal")
+    return prepare(manual_frames(v["code"]) + espn_hist(key, v, today))
+
+
+def prepare(frames, cal=False):
     ok = [d for d in frames if {"Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG"} <= set(d.columns)]
     if not ok:
         raise RuntimeError("sin datos")
@@ -57,7 +116,7 @@ def prepare(frames):
     df = df.dropna(subset=["HomeTeam", "AwayTeam", "FTHG", "FTAG"]).copy()
     df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, errors="coerce")
     df = df.dropna(subset=["Date"]).drop_duplicates(subset=["Date", "HomeTeam", "AwayTeam"], keep="last").copy()
-    y = df.Date.dt.year.where(df.Date.dt.month >= 7, df.Date.dt.year - 1)
+    y = df.Date.dt.year if cal else df.Date.dt.year.where(df.Date.dt.month >= 7, df.Date.dt.year - 1)
     df["season"] = (y % 100).astype(str).str.zfill(2) + ((y + 1) % 100).astype(str).str.zfill(2)
     for c in KEEP[3:]:
         if c in df.columns:
@@ -282,6 +341,7 @@ def fill_missing(key, df, rows):
         out.append({"Date": dd, "HomeTeam": mh, "AwayTeam": ma, "FTHG": int(x), "FTAG": int(y2)})
     if bad:
         log(f"  {key}: sin equivalencia de nombre: {', '.join(sorted(bad))}")
+        EXTRA_BAD.extend(f"{b} ({key})" for b in sorted(bad) if f"{b} ({key})" not in EXTRA_BAD)
     return pd.DataFrame(out) if out else None
 
 
@@ -310,10 +370,11 @@ def of_extra(key, df, today, text=None):
 
 
 # Fuentes gratuitas que publican el marcador el mismo día (solo goles); football-data.co.uk trae después las estadísticas completas.
-EXTRA_N, EXTRA_ERR = {}, []
-ESPN_LG = {"bundesliga": "ger.1", "premier": "eng.1", "laliga": "esp.1", "ucl": "uefa.champions"}
+EXTRA_N, EXTRA_ERR, EXTRA_BAD = {}, [], []
+ESPN_LG = {"bundesliga": "ger.1", "premier": "eng.1", "laliga": "esp.1", "ucl": "uefa.champions", "eredivisie": "ned.1", "noruega": "nor.1",
+           "arabia": "ksa.1", "mls": "usa.1", "ligamx": "mex.1"}
 OLDB_LG = {"bundesliga": "bl1"}
-FDORG_LG = {"bundesliga": "BL1", "premier": "PL", "laliga": "PD", "ucl": "CL"}
+FDORG_LG = {"bundesliga": "BL1", "premier": "PL", "laliga": "PD", "ucl": "CL", "eredivisie": "DED"}
 UCL_STAGE = {"league-phase": "Fase de liga", "playoffs": "Play-offs", "knockout-round-playoffs": "Play-offs",
              "round-of-16": "Octavos", "quarterfinals": "Cuartos", "semifinals": "Semifinales", "final": "Final"}
 UCL_ALIAS = {"sporting cp": "Sporting Lisbon", "inter": "Inter Milan", "internazionale": "Inter Milan", "fc copenhagen": "København",
@@ -378,8 +439,24 @@ def parse_fdorg(js):
     return out
 
 
-TSDB_LG = {"bundesliga": 4331, "premier": 4328, "laliga": 4335, "ucl": 4480}
-ALIAS.update({"spurs": "Tottenham", "man utd": "Man United", "racing santander": "Santander", "deportivo la coruna": "La Coruna"})
+TSDB_LG = {"bundesliga": 4331, "premier": 4328, "laliga": 4335, "ucl": 4480, "eredivisie": 4337, "noruega": 4358, "arabia": 4668, "mls": 4346, "ligamx": 4350}
+ALIAS.update({
+    # MLS (ESPN -> football-data)
+    "red bull new york": "New York Red Bulls", "la galaxy": "Los Angeles Galaxy", "lafc": "Los Angeles FC", "atlanta united fc": "Atlanta Utd",
+    "st louis city sc": "St. Louis City", "d c united": "DC United", "charlotte fc": "Charlotte", "cf montreal": "CF Montreal",
+    "chicago fire fc": "Chicago Fire", "houston dynamo fc": "Houston Dynamo", "inter miami cf": "Inter Miami", "minnesota united fc": "Minnesota United",
+    "new york city fc": "New York City", "orlando city sc": "Orlando City", "seattle sounders fc": "Seattle Sounders",
+    # Liga MX
+    "america": "Club America", "guadalajara": "Guadalajara Chivas", "leon": "Club Leon", "tijuana": "Club Tijuana", "pumas unam": "UNAM Pumas",
+    "santos": "Santos Laguna", "fc juarez": "Juarez", "atletico de san luis": "Atl. San Luis", "queretaro": "Queretaro",
+    # Noruega
+    "sk brann": "Brann", "viking fk": "Viking", "sarpsborg fk": "Sarpsborg 08", "kristiansund bk": "Kristiansund", "ik start": "Start",
+    "hamarkameratene": "HamKam", "valerenga": "Valerenga", "kfum oslo": "KFUM Oslo",
+    # Holanda
+    "ado den haag": "Den Haag", "fortuna sittard": "For Sittard", "sc cambuur": "Cambuur", "ajax amsterdam": "Ajax", "feyenoord rotterdam": "Feyenoord", "fc groningen": "Groningen", "fc twente": "Twente", "fc utrecht": "Utrecht",
+    "pec zwolle": "Zwolle", "heracles almelo": "Heracles", "sparta rotterdam": "Sparta Rotterdam", "nac breda": "NAC Breda", "nec nijmegen": "Nijmegen",
+    "willem ii": "Willem II", "fc volendam": "Volendam", "go ahead eagles": "Go Ahead Eagles",
+    "spurs": "Tottenham", "man utd": "Man United", "racing santander": "Santander", "deportivo la coruna": "La Coruna"})
 
 
 def parse_fpl(fixtures, boot):
@@ -655,6 +732,98 @@ def csv_fixtures(params, today, text=None):
 
 
 
+def parse_espn_fx(js):
+    """Partidos por jugar del scoreboard de ESPN: [(fecha UTC, local, visitante)]."""
+    out = []
+    for ev in (js or {}).get("events", []) or []:
+        comp = (ev.get("competitions") or [{}])[0]
+        st = ((comp.get("status") or ev.get("status") or {}).get("type") or {})
+        if st.get("state") != "pre" or st.get("completed"):
+            continue
+        cs = comp.get("competitors") or []
+        H = [c for c in cs if c.get("homeAway") == "home"]
+        A = [c for c in cs if c.get("homeAway") == "away"]
+        if not H or not A:
+            continue
+        nm = lambda c: (c.get("team") or {}).get("displayName") or ""
+        try:
+            d = dt.datetime.strptime(str(ev.get("date"))[:16], "%Y-%m-%dT%H:%M").replace(tzinfo=dt.timezone.utc)
+        except ValueError:
+            continue
+        out.append((d, nm(H[0]), nm(A[0])))
+    return out
+
+
+def extra_fixtures(params, today, nl_text=None, espn_days=None):
+    """Próximos partidos de las ligas nuevas: new_league_fixtures.csv de football-data (con cuotas 1X2) y, si falta algo, el scoreboard de ESPN."""
+    from zoneinfo import ZoneInfo
+    uk, hn = ZoneInfo("Europe/London"), ZoneInfo("America/Tegucigalpa")
+    now = dt.datetime.now(hn)
+    out, seen = [], set()
+
+    def add(key, loc, h, a, odds):
+        if not (today <= loc.date() <= today + dt.timedelta(days=7)) or loc < now - dt.timedelta(hours=2):
+            return
+        teams = params[key]["teams"]
+        mh, ma = match_team(h, teams), match_team(a, teams)
+        if not mh or not ma or mh == ma:
+            log(f"  sin equivalencia: {h} / {a} ({key})")
+            if key not in ("ucl",) and f"{h}/{a}" not in EXTRA_BAD:
+                EXTRA_BAD.append(f"{h}/{a}")
+            return
+        if (key, mh, ma) in seen:
+            return
+        seen.add((key, mh, ma))
+        out.append({"id": 0, "lg": key, "date": loc.strftime("%Y-%m-%dT%H:%M"), "status": "NS", "h": mh, "a": ma, "odds": odds})
+
+    cc = {v["cc"]: k for k, v in LEAGUES.items() if v.get("src") == "fdnew"}
+    country = {"NOR": "Norway", "USA": "USA", "MEX": "Mexico"}
+    try:
+        if nl_text is None:
+            r = requests.get("https://www.football-data.co.uk/new_league_fixtures.csv", timeout=40, headers={"User-Agent": "Mozilla/5.0"})
+            r.raise_for_status()
+            nl_text = r.content.decode("utf-8-sig", errors="replace")
+        nf = pd.read_csv(io.StringIO(nl_text))
+        nf.columns = [str(c).strip() for c in nf.columns]
+        for _, row in nf.iterrows():
+            key = next((k for c, k in cc.items() if country[c] == str(row.get("Country", "")).strip()), None)
+            if not key or key not in params:
+                continue
+            d = pd.to_datetime(row.get("Date"), dayfirst=True, errors="coerce")
+            if pd.isna(d):
+                continue
+            try:
+                hh, mm = [int(x) for x in str(row.get("Time", "12:00")).split(":")[:2]]
+            except Exception:  # noqa: BLE001
+                hh, mm = 12, 0
+            loc = dt.datetime(d.year, d.month, d.day, hh, mm, tzinfo=uk).astimezone(hn)
+            odds = {}
+            for k, cols in {"1": ["AvgH", "B365H"], "X": ["AvgD", "B365D"], "2": ["AvgA", "B365A"]}.items():
+                for c in cols:
+                    try:
+                        v = float(row.get(c))
+                    except (TypeError, ValueError):
+                        continue
+                    if v > 1:
+                        odds[k] = round(v, 2)
+                        break
+            add(key, loc, str(row.get("Home")), str(row.get("Away")), odds)
+    except Exception as e:  # noqa: BLE001
+        log(f"  new_league_fixtures.csv: {str(e)[:100]}")
+    # ESPN: completa lo que falte y es la única fuente de Arabia
+    for key, v in LEAGUES.items():
+        if not v.get("new") or key not in params or key not in ESPN_LG:
+            continue
+        for i in range(0, 8):
+            day = today + dt.timedelta(days=i)
+            js = espn_days(key, day) if espn_days else _get_json("ESPN", f"https://site.api.espn.com/apis/site/v2/sports/soccer/{ESPN_LG[key]}/scoreboard?dates={day:%Y%m%d}")
+            if js is None:
+                break
+            for d, h, a in parse_espn_fx(js):
+                add(key, d.astimezone(hn), h, a, {})
+    return out
+
+
 def market_lambdas(odds, start):
     """Goles esperados que reproducen las cuotas 1X2 y más/menos 2.5 (sin margen). Devuelve (local, visitante) o None."""
     try:
@@ -927,9 +1096,9 @@ def build(template, out_path="docs/index.html"):
     for key, v in LEAGUES.items():
         log(f"{v['name']}:")
         try:
-            df = prepare(manual_frames(v["code"]) + fetch_frames(v["code"], seasons))
+            df = load_league(key, v, seasons, today)
             df = add_extra(df, of_extra(key, df, today))
-            for label, rows in live_rows(key, (df.Date.max() - pd.Timedelta(days=3)).date(), today):
+            for label, rows in ([] if v.get("src") == "espn" else live_rows(key, max((df.Date.max() - pd.Timedelta(days=3)).date(), today - dt.timedelta(days=45)), today)):
                 ex = fill_missing(key, df, rows)
                 if ex is not None:
                     EXTRA_N[label] = EXTRA_N.get(label, 0) + len(ex)
@@ -938,6 +1107,8 @@ def build(template, out_path="docs/index.html"):
             ref = df.Date.max() + pd.Timedelta(days=1)
             params[key] = league_params(df, ref)
             params[key]["name"] = v["name"]
+            params[key]["tbl"] = v.get("tbl", "euro")      # cómo empieza la temporada para la tabla: euro (julio), cal (enero), split (julio o enero)
+            params[key]["val"] = not v.get("new")           # True: modelo validado con partidos pasados (solo las 3 ligas originales)
         except Exception as e:  # noqa: BLE001
             log(f"  {v['name']} omitida: {e}")
     if not params:
@@ -951,6 +1122,13 @@ def build(template, out_path="docs/index.html"):
         fixtures, note = api_enrich(params, today)
     else:
         fixtures, note = csv_fixtures(params, today)
+        fx2 = extra_fixtures(params, today)
+        have = {(f["lg"], f["h"], f["a"]) for f in fixtures}
+        fixtures = fixtures + [f for f in fx2 if (f["lg"], f["h"], f["a"]) not in have]
+        for i, f in enumerate(fixtures):
+            f["id"] = i + 1
+        if fx2:
+            note += f" Ligas nuevas: {len(fx2)} partidos (football-data y ESPN)."
     for f in fixtures:
         M = params.get(f["lg"], {}).get("models", {}).get("goles") if f.get("odds") else None
         if M and f["h"] in M["att"] and f["a"] in M["att"]:
@@ -965,6 +1143,8 @@ def build(template, out_path="docs/index.html"):
         note += " Marcadores al día con " + ", ".join(f"{k} (+{n})" for k, n in EXTRA_N.items()) + " (solo goles; córners y tiros llegan con football-data.co.uk)."
     if EXTRA_ERR:
         note += " Sin respuesta: " + ", ".join(EXTRA_ERR) + "."
+    if EXTRA_BAD:
+        note += " Sin equivalencia de nombre: " + ", ".join(EXTRA_BAD[:12]) + "."
     fixtures = sorted([f for f in fixtures if (f["lg"], f["h"], f["a"]) not in seen] + ucl_fixtures(params, today) + done, key=lambda x: x["date"])
     if "ucl" not in params:
         det = [l.strip() for l in LOG if "clubelo" in l or "Elo" in l]
@@ -1624,7 +1804,8 @@ function standings(lg){
     games=(DATA.uclh||[]).filter(r=>r[5]==="Fase de liga"&&r[0]>=20260701).map(r=>({h:r[1],a:r[2],hg:r[3],ag:r[4],d:r[0]}));
     note="Fase de liga 2026/27 de la Champions. Los clubes con más jornadas jugadas suben primero; la tabla completa se llena jornada a jornada.";
   }else{
-    const last=L.hm.length?L.hm[L.hm.length-1][0]:0, y=Math.floor(last/10000), mo=Math.floor(last/100)%100, st=(mo>=7?y:y-1)*10000+701;
+    const last=L.hm.length?L.hm[L.hm.length-1][0]:0, y=Math.floor(last/10000), mo=Math.floor(last/100)%100,
+      st=L.tbl==="cal"?y*10000+101:L.tbl==="split"?y*10000+(mo>=7?701:101):(mo>=7?y:y-1)*10000+701;
     games=L.hm.filter(m=>m[0]>=st).map(m=>({h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],d:m[0]}));
     names=L.teams;
     note="Datos hasta "+L.updated+". Orden: puntos, diferencia de goles y goles a favor. Las ligas reales pueden desempatar de otra forma (por ejemplo, el resultado entre los dos equipos en La Liga).";
@@ -1876,6 +2057,12 @@ const MET={
   crd:{n:"tarjetas",need:"crd",tl:[2.5,3.5,4.5,5.5],td:3.5,el:[0.5,1.5,2.5,3.5],ed:1.5}
 };
 const METCH=[["goals","Goles"],["cor","Córners"],["crd","Tarjetas"],["btts","Ambos anotan"],["res","Resultado"]];
+const HASMEM={};
+function lgHas(){   // ¿la liga trae córners / tarjetas? (las ligas nuevas de football-data solo traen goles)
+  const L=DATA.leagues[league]; if(!L||L.kind==="elo"||!L.hm)return {cor:true,crd:true};
+  if(!HASMEM[league])HASMEM[league]={cor:L.hm.some(m=>m[5]>=0&&m[6]>=0),crd:L.hm.some(m=>m[7]!==undefined&&m[7]>=0&&m[8]>=0)};
+  return HASMEM[league];
+}
 function nrm(m){
   const f=m.home?m.hg:m.ag, c=m.home?m.ag:m.hg, hc=m.hc>=0&&m.ac>=0, hk=m.kh>=0&&m.ka>=0;
   const cf=hc?(m.home?m.hc:m.ac):null, kf=hk?(m.home?m.kh:m.ka):null;
@@ -1989,7 +2176,9 @@ function evCard(title,rows,note){
 const EVNOTE="Cuántas veces se cumplió en esos partidos. Verde: 70% o más. Naranja: entre 50% y 69%. Rojo: menos de 50%. Es historia, no una probabilidad.";
 function renderStats(h,a,fx){
   $("scopeT").innerHTML=scopeHtml();
-  $("metricT").innerHTML=METCH.map(([k,t])=>`<button class="chip" type="button" data-m="${k}" aria-pressed="${k===met}">${t}</button>`).join("");
+  const hs=lgHas(), chs=METCH.filter(([k])=>k==="cor"?hs.cor:k==="crd"?hs.crd:true);
+  if(!chs.some(([k])=>k===met))met="goals";
+  $("metricT").innerHTML=chs.map(([k,t])=>`<button class="chip" type="button" data-m="${k}" aria-pressed="${k===met}">${t}</button>`).join("");
   const sh=seriesFor(h,scope), sa=seriesFor(a,scope);
   const seg2=(attr,cur,opts)=>`<div class="seg two" role="group">${opts.map(([k,t])=>`<button type="button" data-${attr}="${k}" aria-pressed="${k===cur}">${t}</button>`).join("")}</div>`;
   let body="";
@@ -2113,7 +2302,8 @@ function render(){
   if(cur.fromMkt&&cur.src!=="user") how.push("Resultado, goles, más o menos y ambos anotan están calculados a partir de las cuotas de las casas; en las pruebas salieron más precisos que los del modelo. Córners y tiros siguen siendo del modelo.");
   if(cur.src==="user") how.push("Como las probabilidades salen de tu casa, la ganancia esperada de esas filas solo refleja su margen. Córners y tiros siguen siendo del modelo.");
   if(!cur.fromMkt&&L.kind!=="elo"&&L.models.goles.btb) how.push("\"Ambos anotan\" se acerca a lo que pasó en esta liga en los últimos 2 años ("+Math.round(L.models.goles.btb*100)+"%). Con partidos pasados vimos que el modelo solo exageraba las diferencias entre partidos en este mercado.");
-  if(!cur.fromMkt&&L.kind!=="elo") how.push("Rango típico de error del modelo: ±8 puntos en el 1X2 (en 2.300 partidos pasados, la diferencia con las casas fue menor a eso el 80% de las veces).");
+  if(!cur.fromMkt&&L.kind!=="elo"&&L.val!==false) how.push("Rango típico de error del modelo: ±8 puntos en el 1X2 (en 2.300 partidos pasados, la diferencia con las casas fue menor a eso el 80% de las veces).");
+  if(L.val===false&&!cur.fromMkt) how.push("Esta liga se agregó hace poco y el modelo no se ha validado con partidos pasados como en Bundesliga, Premier y La Liga, así que el error puede ser mayor. "+(L.models.corners?"":"Solo hay modelo de goles: no tenemos córners, tiros ni tarjetas de esta liga."));
   $("howTxt").innerHTML=how.map(x=>`<p>${esc(x)}</p>`).join("");
   $("inj").innerHTML=L.kind==="elo"?`<div class="none">Champions League: las probabilidades salen del ranking Elo de los clubes (sin córners ni tiros, porque no hay datos comparables entre ligas). No están validadas con partidos pasados.</div>`:injHtml(h,a);
   renderHist(h,a); renderStats(h,a,fx); renderTable(h,a);
