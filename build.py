@@ -1433,6 +1433,16 @@ ul.exp b{font-weight:800}
 .mini{border:1.5px solid var(--ink);background:transparent;border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700;white-space:nowrap}
 .mini:disabled{opacity:.3;border-color:var(--line)}
 .frow{margin-top:6px}
+.bank{margin-top:8px;padding:12px;border:1.5px solid var(--line);border-radius:12px;background:var(--soft)}
+.bank label{display:block;font-size:14px;font-weight:700;margin-bottom:6px}
+.bankrow{display:flex;align-items:center;gap:8px}
+.bankrow .cur{font:800 18px/1 var(--disp);color:var(--muted)}
+.bankrow input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:10px;font-size:18px;font-weight:700;background:var(--paper)}
+.bankk{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--muted)}
+.stk{margin-top:7px;font-size:14px;line-height:1.35}
+.stk b{font-weight:800}
+.stk.yes b{color:var(--good)} .stk.no{color:var(--muted)}
+.stk small{display:block;color:var(--muted);font-size:12px}
 .flag{display:block;background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:6px 9px;font-size:13px;line-height:1.35}
 .mhelp{display:grid;grid-template-columns:1fr 92px 64px auto;gap:8px;font-size:12px;color:var(--muted);padding:2px 0 0}
 
@@ -1631,6 +1641,12 @@ ul.exp b{font-weight:800}
       <div class="pane" id="pMk" hidden>
         <div class="box">
           <h3>Mercados y cuotas</h3>
+          <div class="bank" id="bank">
+            <label for="bankIn">Bankroll (Saldo total):</label>
+            <div class="bankrow"><span class="cur">L</span><input id="bankIn" inputmode="decimal" placeholder="Ej. 5000" autocomplete="off" aria-label="Bankroll, saldo total disponible en lempiras"></div>
+            <div class="bankk" role="group" aria-label="Fracción de Kelly"><span>Kelly fraccional:</span><button class="chip" type="button" data-k="25" aria-pressed="true">25%</button><button class="chip" type="button" data-k="30" aria-pressed="false">30%</button></div>
+            <div class="sub" id="bankTxt"></div>
+          </div>
           <div class="callout" style="margin-top:8px"><b>El modelo no supera a las casas de apuestas.</b> Úsalo como referencia. Una ganancia esperada positiva no es una señal de compra.</div>
           <div class="sub" style="margin-top:10px">Escribe la cuota de tu casa en una fila y toca Anotar para guardarla en la bitácora.</div>
           <div class="sub" id="oddsSrc"></div>
@@ -2234,10 +2250,42 @@ function renderFeat(){
     :`<div class="empty">Ningún partido de este día tiene una racha de 7 de 10 o más en los dos equipos. Prueba con otro día.</div>`;
 }
 
+/* Calculadora de stake: Kelly fraccional. f* = (p·cuota − 1) / (cuota − 1); stake = bankroll × fracción × f* */
+const KEYB="scoutpicks.bank.v1";
+let bank={v:0,k:25};
+try{const o=JSON.parse(localStorage.getItem(KEYB)||"{}"); if(o.v>0)bank.v=o.v; if(o.k===30)bank.k=30;}catch(e){}
+function saveBank(){try{localStorage.setItem(KEYB,JSON.stringify(bank));}catch(e){}}
+function lps(x){return "L "+Math.round(x).toLocaleString("en-US");}
+function stakeHtml(p,v){
+  const ev=p*v-1;
+  if(!(ev>0))return {cls:"stk no",html:"Stake sugerido: <b>L 0 (No apostar)</b>"};
+  const f=(ev/(v-1))*(bank.k/100);                       // fracción del bankroll
+  const pc=(f*100).toFixed(f<0.01?2:1)+"% del bankroll";
+  if(!(bank.v>0))return {cls:"stk yes",html:`Stake sugerido: <b>${pc}</b><small>Escribe tu bankroll arriba para verlo en lempiras.</small>`};
+  const m=bank.v*f;
+  return {cls:"stk yes",html:`Stake sugerido: <b>${m<0.5?"menos de L 1":lps(m)}</b><small>${pc} · Kelly ${bank.k}%</small>`};
+}
+function bankMsg(){
+  $("bankTxt").textContent=bank.v>0?"Con L "+Math.round(bank.v).toLocaleString("en-US")+" y Kelly al "+bank.k+"%, el stake de cada fila sale de su probabilidad y su cuota. Es una referencia, no una garantía: el modelo no supera a las casas, y si su probabilidad falla, Kelly apuesta de más.":"Escribe tu saldo para ver cuánto apostar en cada fila con ganancia esperada positiva. Si la ganancia esperada es negativa, el stake es L 0.";
+}
+function updStakes(){
+  bankMsg();
+  if(cur)cur.rows.forEach((r,i)=>{const el=$("o"+i); if(el&&parseFloat(el.value.replace(",","."))>1)onOdds(i);});
+}
+$("bankIn").value=bank.v>0?String(bank.v):"";
+$("bankIn").addEventListener("input",ev=>{const n=parseFloat(ev.target.value.replace(/[,\s]/g,"")); bank.v=n>0?n:0; saveBank(); updStakes();});
+$("bank").addEventListener("click",ev=>{
+  const b=ev.target.closest&&ev.target.closest("button[data-k]"); if(!b)return;
+  bank.k=+b.dataset.k; saveBank();
+  $("bank").querySelectorAll("button[data-k]").forEach(x=>x.setAttribute("aria-pressed",String(+x.dataset.k===bank.k)));
+  updStakes();
+});
+$("bank").querySelectorAll("button[data-k]").forEach(x=>x.setAttribute("aria-pressed",String(+x.dataset.k===bank.k)));
 function onOdds(i){
   const r=cur.rows[i], v=parseFloat($("o"+i).value.replace(",","."));
   const e=$("e"+i), b=$("b"+i), f=$("f"+i);
-  if(!(v>1)){e.textContent="";e.className="ev";f.innerHTML="";b.disabled=true;return;}
+  const sk=$("s"+i);
+  if(!(v>1)){e.textContent="";e.className="ev";f.innerHTML="";b.disabled=true;if(sk){sk.innerHTML="";sk.className="stk";}return;}
   const ev=r.p*v-1, gap=r.p-1/v;
   let flag="";
   if(ev>0 && gap>=0.08) flag=`<span class="flag">Diferencia grande con la casa: probable error del modelo</span>`;
@@ -2246,6 +2294,7 @@ function onOdds(i){
   e.textContent=(ev>0?"+":"")+(ev*100).toFixed(1)+"%";
   f.innerHTML=flag;
   b.disabled=false;
+  if(sk){const t=stakeHtml(r.p,v); sk.className=t.cls; sk.innerHTML=t.html;}
 }
 
 
@@ -2322,6 +2371,7 @@ function render(){
     html+=`<div class="mrow"><div class="mtop"><span class="ml">${esc(r.label)}</span><span class="mp">${pct(r.p)}</span></div>
       <div class="pbar"><i style="width:${(r.p*100).toFixed(0)}%"></i></div>
       <div class="mbot"><span class="mf">Cuota justa ${f2(1/r.p)}</span><input inputmode="decimal" id="o${i}" data-i="${i}" placeholder="Tu cuota" aria-label="Tu cuota para ${esc(r.label)}"><span class="ev" id="e${i}" title="Ganancia esperada por cada L 1 apostado"></span><button class="mini" id="b${i}" data-i="${i}" disabled type="button">Anotar</button></div>
+      <div class="stk" id="s${i}"></div>
       <div class="frow" id="f${i}"></div></div>`;
   });
   if(sec)html+="</details>";
@@ -2332,6 +2382,7 @@ function render(){
     if(v===undefined&&fx&&fx.odds&&r.key&&fx.odds[r.key]){v=fx.odds[r.key];n++;}
     if(v!==undefined){$("o"+i).value=v;onOdds(i);}
   });
+  bankMsg();
   $("oddsSrc").textContent=(n?`Cargamos ${n} cuotas automáticamente (promedio de varias casas). Cámbialas por las de tu casa. `:"")+"Cuota justa: la mínima para que valga la pena. Número verde o rojo: lo que ganarías o perderías en promedio por cada L 1 si el modelo acertara.";
 }
 

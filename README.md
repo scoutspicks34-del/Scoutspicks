@@ -30,3 +30,6 @@ Si cambias `sw.js`, sube el número de `V` para que los teléfonos descarten la 
 ## Historial europeo en los enfrentamientos directos
 `data/h2h_hist.json` incluye Champions, Europa League y Conference League (openfootball, ~10 temporadas, sin previas). Para regenerar solo la parte europea:
 `PYTHONPATH=. python3 h2hhist.py <carpeta openfootball> data/h2h_hist.json --ucl-only`
+
+## Calculadora de stake (pestaña Apostar)
+Kelly fraccional al 25% o 30%: `stake = bankroll × fracción × (p·cuota − 1) / (cuota − 1)`, con `p` la probabilidad de la fila. Si la ganancia esperada es ≤ 0 muestra "L 0 (No apostar)". El bankroll y la fracción se guardan solo en el navegador de cada persona.
