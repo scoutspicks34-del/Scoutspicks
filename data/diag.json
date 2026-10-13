@@ -1,0 +1,865 @@
+{
+ "https://www.football-data.co.uk/mmz4281/2627/N1.csv": {
+  "status": 200,
+  "bytes": 34375,
+  "lines": 73,
+  "head": "ï»¿Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HTHG,HTAG,HTR,HxG,AxG,HS,AS,HST,AST,HF,AF,HC,AC,HY,AY,HR,AR,B365H,B365D,B365A,BFDH,BFDD,BFDA,BVH,BVD,BVA,BWH,BWD,BWA,PPH,PPD,PPA,SKBH,SKBD,SKBA,MaxH,MaxD,MaxA,AvgH,AvgD,AvgA,BFEH,BFED,BFEA,B365>2.5,B365<2.5,Max>2.5,Max<2.5,Avg>2.5,Avg<2.5,BFE>2.5,BFE<",
+  "tail": "N1,11/10/2026,15:45,Excelsior,Groningen,1,5,A,1,2,A,1.77,2.75,16,14,2,9,10,11,3,6,0,2,0,0,2.55,3.6,2.55,2.5,3.6,2.4,2.5,3.7,2.5,2.55,3.6,2.55,2.5,3.6,2.4,2.45,3.5,2.38,2.6,3.75,2.55,2.51,3.62,2.48,1.1"
+ },
+ "https://www.football-data.co.uk/mmz4281/2526/N1.csv": {
+  "status": 200,
+  "bytes": 158364,
+  "lines": 307,
+  "head": "ï»¿Div,Date,Time,HomeTeam,AwayTeam,FTHG,FTAG,FTR,HTHG,HTAG,HTR,HS,AS,HST,AST,HF,AF,HC,AC,HY,AY,HR,AR,B365H,B365D,B365A,BFDH,BFDD,BFDA,BMGMH,BMGMD,BMGMA,BVH,BVD,BVA,BWH,BWD,BWA,CLH,CLD,CLA,LBH,LBD,LBA,PSH,PSD,PSA,MaxH,MaxD,MaxA,AvgH,AvgD,AvgA,BFEH,BFED,BFEA,B365>2.5,B365<2.5,P>2.5,P<2.5,Max>2.5,Max<2",
+  "tail": "N1,17/05/2026,13:30,Zwolle,Feyenoord,0,2,A,0,0,D,7,22,1,8,11,11,2,12,0,0,0,0,4.33,4.1,1.65,4.33,4.2,1.62,4.7,4.4,1.57,4.33,4.33,1.65,4.2,4.33,1.7,4.2,4.33,1.7,4.2,4.33,1.7,,,,4.75,4.5,1.7,4.32,4.3,1.6"
+ },
+ "https://www.football-data.co.uk/new/NOR.csv": {
+  "status": 200,
+  "bytes": 413702,
+  "lines": 3551,
+  "head": "ï»¿Country,League,Season,Date,Time,Home,Away,HG,AG,Res,PSCH,PSCD,PSCA,MaxCH,MaxCD,MaxCA,AvgCH,AvgCD,AvgCA,BFECH,BFECD,BFECA,B365CH,B365CD,B365CA",
+  "tail": "Norway,Eliteserien,2026,20/09/2026,18:15,Brann,Bodo/Glimt,2,1,H,,,,5,4.8,1.55,4.77,4.62,1.52,5.4,5.2,1.58,5,4.5,1.55"
+ },
+ "https://www.football-data.co.uk/new/USA.csv": {
+  "status": 200,
+  "bytes": 738719,
+  "lines": 6222,
+  "head": "ï»¿Country,League,Season,Date,Time,Home,Away,HG,AG,Res,PSCH,PSCD,PSCA,MaxCH,MaxCD,MaxCA,AvgCH,AvgCD,AvgCA,BFECH,BFECD,BFECA,B365CH,B365CD,B365CA",
+  "tail": "USA,MLS,2026,07/10/2026,01:30,Chicago Fire,Vancouver Whitecaps,3,1,H,,,,2.87,4,2.25,2.74,3.8,2.19,2.98,4,2.34,2.7,3.9,2.2"
+ },
+ "https://www.football-data.co.uk/new/MEX.csv": {
+  "status": 200,
+  "bytes": 572536,
+  "lines": 4744,
+  "head": "ï»¿Country,League,Season,Date,Time,Home,Away,HG,AG,Res,PSCH,PSCD,PSCA,MaxCH,MaxCD,MaxCA,AvgCH,AvgCD,AvgCA,BFECH,BFECD,BFECA,B365CH,B365CD,B365CA",
+  "tail": "Mexico,Liga MX,2026/2027,28/09/2026,04:10,Necaxa,Club America,2,4,A,,,,4.5,3.7,1.76,4.5,3.9,1.83,3.99,3.67,1.77,4.5,3.9,1.83"
+ },
+ "https://www.football-data.co.uk/fixtures.csv": {
+  "status": 200,
+  "bytes": 56330,
+  "lines": 200,
+  "head": "ï»¿Div,Date,Time,HomeTeam,AwayTeam,Referee,B365H,B365D,B365A,BFDH,BFDD,BFDA,BVH,BVD,BVA,BWH,BWD,BWA,PPH,PPD,PPA,SKBH,SKBD,SKBA,MaxH,MaxD,MaxA,AvgH,AvgD,AvgA,BFEH,BFED,BFEA,B365>2.5,B365<2.5,Max>2.5,Max<2.5,Avg>2.5,Avg<2.5,BFE>2.5,BFE<2.5,AHh,B365AHH,B365AHA,MaxAHH,MaxAHA,AvgAHH,AvgAHA,BFEAHH,BFEAHA,",
+  "tail": "T1,12/10/2026,18:00,Eyupspor,Goztep,,3.7,3.5,1.86,3.5,3.6,1.9,3.6,3.5,1.87,3.6,3.6,1.93,3.5,3.7,1.85,3.25,3.4,1.8,3.7,3.75,1.98,3.56,3.59,1.89,2.52,2,1.17,1.73,2.08,1.73,2.1,1.7,2.05,,,0.5,1.9,1.9,1.9",
+  "divs": [
+   "B1",
+   "D1",
+   "D2",
+   "E0",
+   "E1",
+   "E2",
+   "E3",
+   "EC",
+   "F1",
+   "F2",
+   "G1",
+   "I1",
+   "I2",
+   "N1",
+   "P1",
+   "SC0",
+   "SC1",
+   "SC2",
+   "SC3",
+   "SP1",
+   "SP2",
+   "T1"
+  ]
+ },
+ "https://www.football-data.co.uk/new_league_fixtures.csv": {
+  "status": 200,
+  "bytes": 14726,
+  "lines": 128,
+  "head": "ï»¿Country,League,Date,Time,Home,Away,PSH,PSD,PSA,MaxH,MaxD,MaxA,AvgH,AvgD,AvgA,BFEH,BFED,BFEA,B365H,B365D,B365A",
+  "tail": "USA,MLS,12/10/2026,00:00,St. Louis City,Los Angeles Galaxy,,,,1.65,4.75,5.25,1.59,4.34,4.42,1.6,4.9,4.5,1.57,4.2,5.25",
+  "divs": [
+   "Argentina",
+   "Austria",
+   "Brazil",
+   "China",
+   "Denmark",
+   "Finland",
+   "Ireland",
+   "Japan",
+   "Mexico",
+   "Norway",
+   "Poland",
+   "Romania",
+   "Sweden",
+   "Switzerland",
+   "USA"
+  ]
+ },
+ "https://www.football-data.co.uk/new/SAU.csv": {
+  "status": 404,
+  "bytes": 1271,
+  "lines": 41,
+  "head": "<!DOCTYPE html>",
+  "tail": "</html>"
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?dates=20261011": {
+  "status": 200,
+  "bytes": 46057,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 4,
+  "first": {
+   "id": "725",
+   "uid": "s:600~l:725",
+   "name": "Dutch Eredivisie",
+   "abbreviation": "Eredivisie",
+   "midsizeName": "NED.1",
+   "slug": "ned.1",
+   "season": "{'year': 2026, 'startDate': '2026-06-01T04:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/i/leaguelogos/soccer/500/11",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-06-01T04:00Z",
+   "calendarEndDate": "2027-06-01T03:59Z",
+   "calendar": "['2026-08-07T07:00Z', '2026-08-08T07:00Z', '2026-08-09T07:00"
+  },
+  "leagues": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?dates=20261016": {
+  "status": 200,
+  "bytes": 14806,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 1,
+  "first": {
+   "id": "725",
+   "uid": "s:600~l:725",
+   "name": "Dutch Eredivisie",
+   "abbreviation": "Eredivisie",
+   "midsizeName": "NED.1",
+   "slug": "ned.1",
+   "season": "{'year': 2026, 'startDate': '2026-06-01T04:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/i/leaguelogos/soccer/500/11",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-06-01T04:00Z",
+   "calendarEndDate": "2027-06-01T03:59Z",
+   "calendar": "['2026-08-07T07:00Z', '2026-08-08T07:00Z', '2026-08-09T07:00"
+  },
+  "leagues": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?dates=20260801-20261012": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/ned.1/scoreboard?dates=20260801-20261012&limit=1000": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/v2/sports/soccer/ned.1/standings": {
+  "status": 200,
+  "bytes": 83234,
+  "keys": [
+   "uid",
+   "id",
+   "name",
+   "abbreviation",
+   "children",
+   "season",
+   "seasons"
+  ],
+  "children": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/nor.1/scoreboard?dates=20261011": {
+  "status": 200,
+  "bytes": 44081,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 4,
+  "first": {
+   "id": "3960",
+   "uid": "s:600~l:3960",
+   "name": "Norwegian Eliteserien",
+   "abbreviation": "Norwegian Eliteserien",
+   "midsizeName": "NOR.1",
+   "slug": "nor.1",
+   "season": "{'year': 2026, 'startDate': '2026-01-01T05:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-01-01T05:00Z",
+   "calendarEndDate": "2026-12-31T04:59Z",
+   "calendar": "['2026-03-14T07:00Z', '2026-03-15T07:00Z', '2026-03-21T07:00"
+  },
+  "leagues": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/nor.1/scoreboard?dates=20261016": {
+  "status": 200,
+  "bytes": 2404,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 0,
+  "leagues": 1,
+  "first": {
+   "id": "3960",
+   "uid": "s:600~l:3960",
+   "name": "Norwegian Eliteserien",
+   "abbreviation": "Norwegian Eliteserien",
+   "midsizeName": "NOR.1",
+   "slug": "nor.1",
+   "season": "{'year': 2026, 'startDate': '2026-01-01T05:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/combiner/i?img=/i/teamlogos",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-01-01T05:00Z",
+   "calendarEndDate": "2026-12-31T04:59Z",
+   "calendar": "['2026-03-14T07:00Z', '2026-03-15T07:00Z', '2026-03-21T07:00"
+  }
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/nor.1/scoreboard?dates=20260801-20261012": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/nor.1/scoreboard?dates=20260801-20261012&limit=1000": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/v2/sports/soccer/nor.1/standings": {
+  "status": 200,
+  "bytes": 56094,
+  "keys": [
+   "uid",
+   "id",
+   "name",
+   "abbreviation",
+   "children",
+   "season",
+   "seasons"
+  ],
+  "children": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/ksa.1/scoreboard?dates=20261011": {
+  "status": 200,
+  "bytes": 24463,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 2,
+  "first": {
+   "id": "21231",
+   "uid": "s:600~l:21231",
+   "name": "Saudi Pro League",
+   "abbreviation": "Saudi Pro League",
+   "midsizeName": "KSA.1",
+   "slug": "ksa.1",
+   "season": "{'year': 2026, 'startDate': '2026-07-01T04:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/i/leaguelogos/soccer/500/24",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-07-01T04:00Z",
+   "calendarEndDate": "2027-07-01T03:59Z",
+   "calendar": "['2026-08-13T07:00Z', '2026-08-14T07:00Z', '2026-08-15T07:00"
+  },
+  "leagues": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/ksa.1/scoreboard?dates=20261016": {
+  "status": 200,
+  "bytes": 38251,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 3,
+  "first": {
+   "id": "21231",
+   "uid": "s:600~l:21231",
+   "name": "Saudi Pro League",
+   "abbreviation": "Saudi Pro League",
+   "midsizeName": "KSA.1",
+   "slug": "ksa.1",
+   "season": "{'year': 2026, 'startDate': '2026-07-01T04:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/i/leaguelogos/soccer/500/24",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-07-01T04:00Z",
+   "calendarEndDate": "2027-07-01T03:59Z",
+   "calendar": "['2026-08-13T07:00Z', '2026-08-14T07:00Z', '2026-08-15T07:00"
+  },
+  "leagues": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/ksa.1/scoreboard?dates=20260801-20261012": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/ksa.1/scoreboard?dates=20260801-20261012&limit=1000": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/v2/sports/soccer/ksa.1/standings": {
+  "status": 200,
+  "bytes": 55609,
+  "keys": [
+   "uid",
+   "id",
+   "name",
+   "abbreviation",
+   "children",
+   "season",
+   "seasons"
+  ],
+  "children": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard?dates=20261011": {
+  "status": 200,
+  "bytes": 15810,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 1,
+  "first": {
+   "id": "770",
+   "uid": "s:600~l:770",
+   "name": "MLS",
+   "abbreviation": "MLS",
+   "midsizeName": "USA.1",
+   "slug": "usa.1",
+   "season": "{'year': 2026, 'startDate': '2026-01-01T10:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/i/leaguelogos/soccer/500/19",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-01-01T10:00Z",
+   "calendarEndDate": "2026-12-31T04:59Z",
+   "calendar": "['2026-02-21T08:00Z', '2026-02-22T08:00Z', '2026-02-28T08:00"
+  },
+  "leagues": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard?dates=20261016": {
+  "status": 200,
+  "bytes": 2253,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 0,
+  "leagues": 1,
+  "first": {
+   "id": "770",
+   "uid": "s:600~l:770",
+   "name": "MLS",
+   "abbreviation": "MLS",
+   "midsizeName": "USA.1",
+   "slug": "usa.1",
+   "season": "{'year': 2026, 'startDate': '2026-01-01T10:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/i/leaguelogos/soccer/500/19",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-01-01T10:00Z",
+   "calendarEndDate": "2026-12-31T04:59Z",
+   "calendar": "['2026-02-21T08:00Z', '2026-02-22T08:00Z', '2026-02-28T08:00"
+  }
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard?dates=20260801-20261012": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/usa.1/scoreboard?dates=20260801-20261012&limit=1000": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/v2/sports/soccer/usa.1/standings": {
+  "status": 200,
+  "bytes": 134611,
+  "keys": [
+   "uid",
+   "id",
+   "name",
+   "abbreviation",
+   "children",
+   "season",
+   "seasons"
+  ],
+  "children": 2
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard?dates=20261011": {
+  "status": 200,
+  "bytes": 36250,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 3,
+  "first": {
+   "id": "760",
+   "uid": "s:600~l:760",
+   "name": "Mexican Liga BBVA MX",
+   "abbreviation": "Liga MX",
+   "midsizeName": "MEX.1",
+   "slug": "mex.1",
+   "season": "{'year': 2026, 'startDate': '2026-06-01T04:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/i/leaguelogos/soccer/500/22",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-06-01T04:00Z",
+   "calendarEndDate": "2027-06-01T03:59Z",
+   "calendar": "['2026-07-16T07:00Z', '2026-07-17T07:00Z', '2026-07-18T07:00"
+  },
+  "leagues": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard?dates=20261016": {
+  "status": 200,
+  "bytes": 37805,
+  "keys": [
+   "leagues",
+   "events",
+   "provider"
+  ],
+  "events": 3,
+  "first": {
+   "id": "760",
+   "uid": "s:600~l:760",
+   "name": "Mexican Liga BBVA MX",
+   "abbreviation": "Liga MX",
+   "midsizeName": "MEX.1",
+   "slug": "mex.1",
+   "season": "{'year': 2026, 'startDate': '2026-06-01T04:00Z', 'endDate': ",
+   "logos": "[{'href': 'https://a.espncdn.com/i/leaguelogos/soccer/500/22",
+   "calendarType": "day",
+   "calendarIsWhitelist": "True",
+   "calendarStartDate": "2026-06-01T04:00Z",
+   "calendarEndDate": "2027-06-01T03:59Z",
+   "calendar": "['2026-07-16T07:00Z', '2026-07-17T07:00Z', '2026-07-18T07:00"
+  },
+  "leagues": 1
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard?dates=20260801-20261012": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/site/v2/sports/soccer/mex.1/scoreboard?dates=20260801-20261012&limit=1000": {
+  "status": 400,
+  "bytes": 55,
+  "keys": [
+   "code",
+   "message"
+  ]
+ },
+ "https://site.api.espn.com/apis/v2/sports/soccer/mex.1/standings": {
+  "status": 200,
+  "bytes": 102348,
+  "keys": [
+   "uid",
+   "id",
+   "name",
+   "abbreviation",
+   "children",
+   "season",
+   "seasons"
+  ],
+  "children": 1
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/search_all_leagues.php?c=Norway&s=Soccer": {
+  "status": 200,
+  "bytes": 13274,
+  "keys": [
+   "countries"
+  ],
+  "countries": 5,
+  "first": "{'idLeague': '5208', 'idAPIfootball': '7923', 'idAPIfootballv3': '725', 'strSport': 'Soccer', 'strLeague': 'Norway Toppserien', 'strLeagueAlternate': '', 'intDivision': '1', 'idCup': '0', 'strCurrentSeason': '2026', 'intFormedYear': '1984', 'dateFirstEvent': '2022-03-20', 'strGender': 'Female', 'strCountry': 'Norway', 'strWebsite': 'toppserien.no', 'strFacebook': '', 'strInstagram': '', 'strTwitte"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/search_all_leagues.php?c=Netherlands&s=Soccer": {
+  "status": 200,
+  "bytes": 18,
+  "keys": [
+   "countries"
+  ]
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/search_all_leagues.php?c=Saudi%20Arabia&s=Soccer": {
+  "status": 200,
+  "bytes": 8971,
+  "keys": [
+   "countries"
+  ],
+  "countries": 4,
+  "first": "{'idLeague': '5627', 'idAPIfootball': '8584', 'idAPIfootballv3': '308', 'strSport': 'Soccer', 'strLeague': 'Saudi First Division League', 'strLeagueAlternate': 'دوري الدرجة الأولى السعودي', 'intDivision': '2', 'idCup': '0', 'strCurrentSeason': '2026-2027', 'intFormedYear': '1976', 'dateFirstEvent': '2024-08-19', 'strGender': 'Male', 'strCountry': 'Saudi Arabia', 'strWebsite': '', 'strFacebook': ''"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/search_all_leagues.php?c=USA&s=Soccer": {
+  "status": 200,
+  "bytes": 18,
+  "keys": [
+   "countries"
+  ]
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/search_all_leagues.php?c=Mexico&s=Soccer": {
+  "status": 200,
+  "bytes": 12262,
+  "keys": [
+   "countries"
+  ],
+  "countries": 4,
+  "first": "{'idLeague': '5662', 'idAPIfootball': '8575', 'idAPIfootballv3': '857', 'strSport': 'Soccer', 'strLeague': 'Mexican Campeon de Campeones', 'strLeagueAlternate': '', 'intDivision': '99', 'idCup': '1', 'strCurrentSeason': '2026', 'intFormedYear': '1942', 'dateFirstEvent': '2025-07-21', 'strGender': 'Male', 'strCountry': 'Mexico', 'strWebsite': '', 'strFacebook': '', 'strInstagram': '', 'strTwitter':"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=4337": {
+  "status": 200,
+  "bytes": 43580,
+  "keys": [
+   "leagues"
+  ],
+  "leagues": 1,
+  "first": {
+   "idLeague": "4337",
+   "idAPIfootball": "8316",
+   "idAPIfootballv3": "88",
+   "strSport": "Soccer",
+   "strLeague": "Dutch Eredivisie",
+   "strLeagueAlternate": "Eredivisie",
+   "intDivision": "0",
+   "idCup": "0",
+   "strCurrentSeason": "2026-2027",
+   "intFormedYear": "1956",
+   "dateFirstEvent": "2012-08-10",
+   "strGender": "Male",
+   "strCountry": "The Netherlands",
+   "strWebsite": "www.eredivisie.nl"
+  }
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4337&s=2026": {
+  "status": 200,
+  "bytes": 15,
+  "keys": [
+   "events"
+  ]
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4337&s=2025-2026": {
+  "status": 200,
+  "bytes": 5486,
+  "keys": [
+   "events"
+  ],
+  "events": 5,
+  "first": "{'idEvent': '2268153', 'strEvent': 'Fortuna Sittard vs Go Ahead Eagles', 'strEventAlternate': 'Go Ahead Eagles @ Fortuna Sittard', 'strSeason': '2025-2026', 'idLeague': '4337', 'strLeague': 'Dutch Eredivisie', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/5cdsu21725984946.png', 'strSport': 'Soccer', 'strHomeTeam': 'Fortuna Sittard', 'strAwayTeam': 'Go Ahead Eagles', 'idHo"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4337": {
+  "status": 200,
+  "bytes": 1442,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2489137', 'idAPIfootball': '1552188', 'strTimestamp': '2026-10-11T14:45:00', 'strEvent': 'Excelsior vs Groningen', 'strEventAlternate': 'Groningen @ Excelsior', 'strFilename': 'Dutch Eredivisie 2026-10-11 Excelsior vs Groningen', 'strSport': 'Soccer', 'idLeague': '4337', 'strLeague': 'Dutch Eredivisie', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/5cdsu21725"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4337": {
+  "status": 200,
+  "bytes": 1439,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2489138', 'idAPIfootball': '1552189', 'strTimestamp': '2026-10-16T18:00:00', 'strEvent': 'Heerenveen vs Excelsior', 'strEventAlternate': 'Excelsior @ Heerenveen', 'strFilename': 'Dutch Eredivisie 2026-10-16 Heerenveen vs Excelsior', 'strSport': 'Soccer', 'idLeague': '4337', 'strLeague': 'Dutch Eredivisie', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/5cdsu21"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=4350": {
+  "status": 200,
+  "bytes": 5858,
+  "keys": [
+   "leagues"
+  ],
+  "leagues": 1,
+  "first": {
+   "idLeague": "4350",
+   "idAPIfootball": "8306",
+   "idAPIfootballv3": "262",
+   "strSport": "Soccer",
+   "strLeague": "Mexican Liga MX",
+   "strLeagueAlternate": "Mexico Primera League",
+   "intDivision": "1",
+   "idCup": "0",
+   "strCurrentSeason": "2026-2027",
+   "intFormedYear": "1943",
+   "dateFirstEvent": "2016-01-09",
+   "strGender": "Male",
+   "strCountry": "Mexico",
+   "strWebsite": "www.ligamx.net"
+  }
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4350&s=2026": {
+  "status": 200,
+  "bytes": 15,
+  "keys": [
+   "events"
+  ]
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4350&s=2025-2026": {
+  "status": 200,
+  "bytes": 5583,
+  "keys": [
+   "events"
+  ],
+  "events": 5,
+  "first": "{'idEvent': '2266920', 'strEvent': 'Puebla vs Atlas', 'strEventAlternate': 'Atlas @ Puebla', 'strSeason': '2025-2026', 'idLeague': '4350', 'strLeague': 'Mexican Primera League', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/mav5rx1686157960.png', 'strSport': 'Soccer', 'strHomeTeam': 'Puebla', 'strAwayTeam': 'Atlas', 'idHomeTeam': '134199', 'idAwayTeam': '134195', 'intRoun"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4350": {
+  "status": 200,
+  "bytes": 1484,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2487550', 'idAPIfootball': '1550992', 'strTimestamp': '2026-10-12T01:15:00', 'strEvent': 'Pumas UNAM vs Cruz Azul', 'strEventAlternate': 'Cruz Azul @ Pumas UNAM', 'strFilename': 'Mexican Liga MX 2026-10-12 Pumas UNAM vs Cruz Azul', 'strSport': 'Soccer', 'idLeague': '4350', 'strLeague': 'Mexican Primera League', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/ma"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4350": {
+  "status": 200,
+  "bytes": 1401,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2487551', 'idAPIfootball': '1550993', 'strTimestamp': '2026-10-17T01:00:00', 'strEvent': 'Necaxa vs Atlas', 'strEventAlternate': 'Atlas @ Necaxa', 'strFilename': 'Mexican Liga MX 2026-10-17 Necaxa vs Atlas', 'strSport': 'Soccer', 'idLeague': '4350', 'strLeague': 'Mexican Primera League', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/mav5rx1686157960.png', 'st"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=4346": {
+  "status": 200,
+  "bytes": 12374,
+  "keys": [
+   "leagues"
+  ],
+  "leagues": 1,
+  "first": {
+   "idLeague": "4346",
+   "idAPIfootball": "7904",
+   "idAPIfootballv3": "253",
+   "strSport": "Soccer",
+   "strLeague": "American Major League Soccer",
+   "strLeagueAlternate": "MLS, Major League Soccer",
+   "intDivision": "0",
+   "idCup": "0",
+   "strCurrentSeason": "2026-2027",
+   "intFormedYear": "1993",
+   "dateFirstEvent": "2013-03-02",
+   "strGender": "Male",
+   "strCountry": "United States",
+   "strWebsite": "www.mlssoccer.com"
+  }
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4346&s=2026": {
+  "status": 200,
+  "bytes": 6273,
+  "keys": [
+   "events"
+  ],
+  "events": 5,
+  "first": "{'idEvent': '2406707', 'strEvent': 'St. Louis City SC vs Charlotte FC', 'strEventAlternate': 'Charlotte FC @ St. Louis City SC', 'strSeason': '2026', 'idLeague': '4346', 'strLeague': 'American Major League Soccer', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/dqo6r91549878326.png', 'strSport': 'Soccer', 'strHomeTeam': 'St. Louis City SC', 'strAwayTeam': 'Charlotte FC', '"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4346&s=2025-2026": {
+  "status": 200,
+  "bytes": 15,
+  "keys": [
+   "events"
+  ]
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4346": {
+  "status": 200,
+  "bytes": 1756,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2407127', 'idAPIfootball': '1490525', 'strTimestamp': '2026-10-11T23:00:00', 'strEvent': 'St. Louis City SC vs LA Galaxy', 'strEventAlternate': 'LA Galaxy @ St. Louis City SC', 'strFilename': 'American Major League Soccer 2026-10-11 St. Louis City SC vs LA Galaxy', 'strSport': 'Soccer', 'idLeague': '4346', 'strLeague': 'American Major League Soccer', 'strLeagueBadge': 'https://r2.thes"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4346": {
+  "status": 200,
+  "bytes": 1714,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2407128', 'idAPIfootball': '1490526', 'strTimestamp': '2026-10-14T23:30:00', 'strEvent': 'Inter Miami vs New York City FC', 'strEventAlternate': 'New York City FC @ Inter Miami', 'strFilename': 'American Major League Soccer 2026-10-14 Inter Miami vs New York City FC', 'strSport': 'Soccer', 'idLeague': '4346', 'strLeague': 'American Major League Soccer', 'strLeagueBadge': 'https://r2.t"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=4668": {
+  "status": 200,
+  "bytes": 3623,
+  "keys": [
+   "leagues"
+  ],
+  "leagues": 1,
+  "first": {
+   "idLeague": "4668",
+   "idAPIfootball": "7599",
+   "idAPIfootballv3": "307",
+   "strSport": "Soccer",
+   "strLeague": "Saudi-Arabian Pro League",
+   "strLeagueAlternate": "Saudi Professional League",
+   "intDivision": "1",
+   "idCup": "0",
+   "strCurrentSeason": "2026-2027",
+   "intFormedYear": "1975",
+   "dateFirstEvent": "2020-02-20",
+   "strGender": "Male",
+   "strCountry": "Saudi Arabia",
+   "strWebsite": "www.spl.com.sa"
+  }
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4668&s=2026": {
+  "status": 200,
+  "bytes": 15,
+  "keys": [
+   "events"
+  ]
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4668&s=2025-2026": {
+  "status": 200,
+  "bytes": 5437,
+  "keys": [
+   "events"
+  ],
+  "events": 5,
+  "first": "{'idEvent': '2311687', 'strEvent': 'Damac vs Al-Hazem', 'strEventAlternate': 'Al-Hazem @ Damac', 'strSeason': '2025-2026', 'idLeague': '4668', 'strLeague': 'Saudi-Arabian Pro League', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/w67i621701772123.png', 'strSport': 'Soccer', 'strHomeTeam': 'Damac', 'strAwayTeam': 'Al-Hazem', 'idHomeTeam': '137852', 'idAwayTeam': '136200', "
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4668": {
+  "status": 200,
+  "bytes": 1453,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2573368', 'idAPIfootball': '1603043', 'strTimestamp': '2026-10-11T18:00:00', 'strEvent': 'Al-Shabab vs Al-Taawoun', 'strEventAlternate': 'Al-Taawoun @ Al-Shabab', 'strFilename': 'Saudi-Arabian Pro League 2026-10-11 Al-Shabab vs Al-Taawoun', 'strSport': 'Soccer', 'idLeague': '4668', 'strLeague': 'Saudi-Arabian Pro League', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/leag"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4668": {
+  "status": 200,
+  "bytes": 1468,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2573375', 'idAPIfootball': '1603046', 'strTimestamp': '2026-10-15T13:40:00', 'strEvent': 'Al-Faisaly vs Al-Kholood', 'strEventAlternate': 'Al-Kholood @ Al-Faisaly', 'strFilename': 'Saudi-Arabian Pro League 2026-10-15 Al-Faisaly vs Al-Kholood', 'strSport': 'Soccer', 'idLeague': '4668', 'strLeague': 'Saudi-Arabian Pro League', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/l"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=4358": {
+  "status": 200,
+  "bytes": 5714,
+  "keys": [
+   "leagues"
+  ],
+  "leagues": 1,
+  "first": {
+   "idLeague": "4358",
+   "idAPIfootball": "7920",
+   "idAPIfootballv3": "103",
+   "strSport": "Soccer",
+   "strLeague": "Norwegian Eliteserien",
+   "strLeagueAlternate": "Eliteserien",
+   "intDivision": "1",
+   "idCup": "0",
+   "strCurrentSeason": "2026",
+   "intFormedYear": "1937",
+   "dateFirstEvent": "2014-03-28",
+   "strGender": "Male",
+   "strCountry": "Norway",
+   "strWebsite": "www.eliteserien.no"
+  }
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4358&s=2026": {
+  "status": 200,
+  "bytes": 16018,
+  "keys": [
+   "events"
+  ],
+  "events": 15,
+  "first": "{'idEvent': '2398991', 'strEvent': 'Hamarkameratene vs Viking', 'strEventAlternate': 'Viking @ Hamarkameratene', 'strSeason': '2026', 'idLeague': '4358', 'strLeague': 'Norwegian Eliteserien', 'strLeagueBadge': 'https://r2.thesportsdb.com/images/media/league/badge/owo80l1512822583.png', 'strSport': 'Soccer', 'strHomeTeam': 'Hamarkameratene', 'strAwayTeam': 'Viking', 'idHomeTeam': '134753', 'idAwayT"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4358&s=2025-2026": {
+  "status": 200,
+  "bytes": 15,
+  "keys": [
+   "events"
+  ]
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4358": {
+  "status": 200,
+  "bytes": 1469,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2399171', 'idAPIfootball': '1494776', 'strTimestamp': '2026-10-12T17:00:00', 'strEvent': 'KFUM-Kameratene Oslo vs Vålerenga', 'strEventAlternate': 'Vålerenga @ KFUM-Kameratene Oslo', 'strFilename': 'Norwegian Eliteserien 2026-10-12 KFUM-Kameratene Oslo vs Vålerenga', 'strSport': 'Soccer', 'idLeague': '4358', 'strLeague': 'Norwegian Eliteserien', 'strLeagueBadge': 'https://r2.thesports"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4358": {
+  "status": 200,
+  "bytes": 1465,
+  "keys": [
+   "events"
+  ],
+  "events": 1,
+  "first": "{'idEvent': '2399175', 'idAPIfootball': '1494780', 'strTimestamp': '2026-10-17T12:00:00', 'strEvent': 'Hamarkameratene vs Bodø/Glimt', 'strEventAlternate': 'Bodø/Glimt @ Hamarkameratene', 'strFilename': 'Norwegian Eliteserien 2026-10-17 Hamarkameratene vs Bodø/Glimt', 'strSport': 'Soccer', 'idLeague': '4358', 'strLeague': 'Norwegian Eliteserien', 'strLeagueBadge': 'https://r2.thesportsdb.com/image"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=4359": {
+  "status": 429,
+  "bytes": 7197,
+  "text": "<!doctype html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4359&s=2026": {
+  "status": 429,
+  "bytes": 7197,
+  "text": "<!doctype html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4359&s=2025-2026": {
+  "status": 429,
+  "bytes": 7197,
+  "text": "<!doctype html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventspastleague.php?id=4359": {
+  "status": 429,
+  "bytes": 7197,
+  "text": "<!doctype html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-"
+ },
+ "https://www.thesportsdb.com/api/v1/json/3/eventsnextleague.php?id=4359": {
+  "status": 429,
+  "bytes": 7197,
+  "text": "<!doctype html>\n<!--[if lt IE 7]> <html class=\"no-js ie6 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 7]>    <html class=\"no-js ie7 oldie\" lang=\"en-US\"> <![endif]-->\n<!--[if IE 8]>    <html class=\"no-"
+ }
+}
