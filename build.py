@@ -883,6 +883,41 @@ def ucl_alias(params, rows):
     return out
 
 
+def h2h_data(params, uclh):
+    """Historial de ~10 temporadas (data/h2h_hist.json) solo para los equipos actuales y solo lo que no cubren ya los datos recientes."""
+    try:
+        raw = json.loads((Path(__file__).parent / "data" / "h2h_hist.json").read_text(encoding="utf8"))
+    except Exception as e:  # noqa: BLE001
+        log(f"  historial H2H: no se pudo leer ({e})")
+        return None
+
+    def pack(src, keep, extra=None):
+        used = sorted({src["t"][m[1]] for m in keep} | {src["t"][m[2]] for m in keep})
+        ix = {n: i for i, n in enumerate(used)}
+        out = {"t": used, "m": [[m[0], ix[src["t"][m[1]]], ix[src["t"][m[2]]]] + m[3:] for m in keep]}
+        if extra:
+            out.update(extra)
+        return out
+
+    res = {"leagues": {}, "ucl": None}
+    for key, P in params.items():
+        src = raw.get("leagues", {}).get(key)
+        if key == "ucl" or not src or not P.get("hm"):
+            continue
+        cur, cut = set(P["teams"]), min(r[0] for r in P["hm"])
+        keep = [m for m in src["m"] if m[0] < cut and src["t"][m[1]] in cur and src["t"][m[2]] in cur]
+        res["leagues"][key] = pack(src, keep)
+    src = raw.get("ucl")
+    if src and uclh:
+        names = set(UCL_TEAMS) | {r[1] for r in uclh} | {r[2] for r in uclh}
+        cut = min([r[0] for r in uclh if r[5] != "Previa"] or [99999999])
+        keep = [m for m in src["m"] if m[0] < cut and src["t"][m[1]] in names and src["t"][m[2]] in names]
+        res["ucl"] = pack(src, keep, {"s": src["s"]})
+    n = sum(len(v["m"]) for v in res["leagues"].values()) + (len(res["ucl"]["m"]) if res["ucl"] else 0)
+    log(f"  historial H2H: {n} partidos de temporadas anteriores")
+    return res
+
+
 def build(template, out_path="docs/index.html"):
     now = dt.datetime.utcnow()
     local = now + HN
@@ -938,7 +973,7 @@ def build(template, out_path="docs/index.html"):
         falta = [t for t in UCL_TEAMS if t not in params["ucl"]["elo"]]
         note += f" Champions: Elo guardado del {STATIC_ELO_DATE}." + (" Faltan: " + ", ".join(falta) + "." if falta else "")
     log(note)
-    data = {"leagues": params, "fixtures": fixtures, "note": note, "uclh": uclh, "uclalias": ucl_alias(params, uclh),
+    data = {"leagues": params, "fixtures": fixtures, "note": note, "uclh": uclh, "uclalias": ucl_alias(params, uclh), "h2h": h2h_data(params, uclh),
             "generated": local.strftime("%Y-%m-%d %H:%M") + " (hora de Honduras)"}
     html = template.replace("__PARAMS__", json.dumps(data, separators=(",", ":"), ensure_ascii=False))
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
@@ -1101,6 +1136,7 @@ details[open]>summary::after{transform:rotate(-135deg)}
 .sumg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 4px}
 .sumg>div{background:var(--soft);border-radius:12px;padding:9px 11px}
 .sumg b{display:block;font:800 20px/1.1 var(--disp);font-stretch:75%;white-space:nowrap}
+.sumg.h2 b{font-size:17px;white-space:normal;line-height:1.2}
 .sumg span{display:block;font-size:12.5px;color:var(--muted);line-height:1.3;margin-top:2px}
 .hrow{display:grid;grid-template-columns:28px 1fr;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
 .rb{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font:800 14px/1 var(--body);color:#fff;margin-top:1px}
@@ -1566,6 +1602,11 @@ function expectHtml(h,a,c,fin){
     const parts=[]; if(sh)parts.push(`~${sh.M.tot.toFixed(0)} tiros totales`); if(so)parts.push(`~${so.M.tot.toFixed(0)} a puerta`);
     li.push(`<li><b>Tiros:</b> se esperan ${parts.join(" y ")}.${sh?` Tiros totales: ${sh.txt}.`:""}${so?` A puerta: ${so.txt}.`:""}</li>`);
   }
+  const hr=h2hRaw(h,a,5);                  // historial directo: solo si hay al menos 3 duelos previos
+  if(hr.length>=3){
+    const N=hr.map(nrm), n=N.length, w=N.filter(x=>x.f>x.c).length, d=N.filter(x=>x.f===x.c).length, o=N.filter(x=>x.tot>=3).length;
+    li.push(`<li><b>Historial directo (H2H):</b> en sus últimos ${n} duelos hubo un promedio de ${(N.reduce((x,y)=>x+y.tot,0)/n).toFixed(1)} goles (más de 2.5 en ${o} de ${n}). ${esc2(h)} ganó ${w}, empataron ${d} y ${esc2(a)} ganó ${n-w-d}.</li>`);
+  }
   return `<div class="exptit">📌 Resumen de tendencias para este partido</div>
     <ul class="exp">${li.join("")}</ul>
     <div class="sub" style="margin-top:12px">En goles, la línea sugerida es la que el modelo ubica entre 65% y 75% (si ninguna cae ahí, la más cercana por encima). ${co||sh||so?`En córners y tiros muestro la mejor línea de \"más de\" y de \"menos de\" entre 65% y 85%, la más cercana a 75%; si el partido promete muchos córners (9.5 o más) o tiros (25 o más), va primero la de \"más de\". `:""}Son probabilidades, no garantías. ${co||sh||so?"De córners y tiros no tenemos cuotas para saber si pagan bien.":""}</div>`;
@@ -1757,9 +1798,9 @@ function sumHtml(ms){
   return `<div class="sumg">${t(w+"G "+d+"E "+l+"P","Ganó, empató y perdió")}${t((gf/n).toFixed(1)+" – "+(gc/n).toFixed(1),"Goles a favor y en contra por partido")}${t(bt+" de "+n,"Partidos donde los dos anotaron")}${t(o+" de "+n,"Partidos con más de 2.5 goles")}${nc?t((cf/nc).toFixed(1)+" – "+(cc/nc).toFixed(1),"Córners a favor y en contra por partido"):""}${nk?t((kf/nk).toFixed(1)+" – "+(kc/nk).toFixed(1),"Tarjetas del equipo y del rival por partido"):""}</div>`;
 }
 function matchRow(m,me){
-  const f=m.home?m.hg:m.ag, c=m.home?m.ag:m.hg, res=f>c?"G":f===c?"E":"P";
-  const nx=t=>t===me?`<b>${esc(t)}</b>`:esc(t);
-  const chips=[]; if(m.stage)chips.push(m.stage); if(m.note)chips.push(m.note);
+  const f=m.home?m.hg:m.ag, c=m.home?m.ag:m.hg, res=f>c?"G":f===c?"E":"P", mine=Array.isArray(me)?me:[me];
+  const nx=t=>mine.includes(t)?`<b>${esc(t)}</b>`:esc(t);
+  const chips=[]; if(m.comp)chips.push(m.comp); if(m.stage)chips.push(m.stage); if(m.note)chips.push(m.note);
   if(m.hc>=0&&m.ac>=0)chips.push("Córners "+m.hc+"–"+m.ac); if(m.kh>=0&&m.ka>=0)chips.push("Tarjetas "+m.kh+"–"+m.ka);
   return `<div class="hrow"><span class="rb ${res}" title="${res==="G"?"Ganó":res==="E"?"Empató":"Perdió"}">${res}</span><div><div class="hline"><span>${nx(m.h)}</span><span class="hsc">${m.hg}–${m.ag}</span><span>${nx(m.a)}</span></div><div class="hmeta">${ymd(m.d)} · ${m.home?"De local":"De visita"}</div>${chips.length?`<div class="hmeta hchips">${chips.map(esc).join(" · ")}</div>`:""}</div></div>`;
 }
@@ -1770,19 +1811,15 @@ function scopeHtml(){
   <div class="sub sc-note">${esc(scTxt())}</div>`;
 }
 function h2hHtml(h,a){
-  let out=[], me=h;
-  if(scope==="ucl"){
-    const ch=uclName(h), ca=uclName(a); if(!ch||!ca)return ""; me=ch;
-    const M=DATA.uclh||[];
-    for(let k=M.length-1;k>=0&&out.length<6;k--){const m=M[k];
-      if((m[1]===ch&&m[2]===ca)||(m[1]===ca&&m[2]===ch))out.push({d:m[0],h:m[1],a:m[2],hg:m[3],ag:m[4],hc:-1,ac:-1,kh:-1,ka:-1,home:m[1]===ch,stage:m[5],note:m[6]});}
-  }else{
-    const rh=resolveHist(h), ra=resolveHist(a); if(!rh||!ra||rh.key!==ra.key)return ""; me=rh.name;
-    const L=DATA.leagues[rh.key], i=L.hteams.indexOf(rh.name), j=L.hteams.indexOf(ra.name);
-    for(let k=L.hm.length-1;k>=0&&out.length<6;k--){const m=L.hm[k];
-      if((m[1]===i&&m[2]===j)||(m[1]===j&&m[2]===i))out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],hc:m[5],ac:m[6],kh:m[7]===undefined?-1:m[7],ka:m[8]===undefined?-1:m[8],home:m[1]===i});}
+  const out=h2hRaw(h,a,10), rh=resolveHist(h), me=[h,uclName(h),rh&&rh.name].filter(Boolean);
+  let box="";
+  if(out.length){
+    const N=out.map(nrm), n=N.length, w=N.filter(x=>x.f>x.c).length, d=N.filter(x=>x.f===x.c).length, l=n-w-d;
+    const gf=N.reduce((x,y)=>x+y.f,0)/n, gc=N.reduce((x,y)=>x+y.c,0)/n, o=N.filter(x=>x.tot>=3).length, bt=N.filter(x=>x.f>0&&x.c>0).length;
+    const t=(v,lab)=>`<div><b>${v}</b><span>${lab}</span></div>`, pc=x=>Math.round(100*x/n)+"%";
+    box=`<div class="sumg h2">${t(w+"G "+d+"E "+l+"P","Balance de "+esc(h)+" (ganó, empató, perdió)")}${t(gf.toFixed(1)+" – "+gc.toFixed(1)+" ("+(gf+gc).toFixed(1)+" total)","Goles por duelo ("+esc(h)+" – "+esc(a)+")")}${t(o+" de "+n+" partidos ("+pc(o)+")","Más de 2.5 goles")}${t(bt+" de "+n+" partidos ("+pc(bt)+")","Ambos anotaron")}</div>`;
   }
-  return `<div class="box h2h"><h3>Enfrentamientos directos</h3><div class="sub">Solo informativo: el modelo no usa estos resultados. G, E y P se cuentan desde ${esc(me)}.</div>${out.length?`<div>${out.map(m=>matchRow(m,me)).join("")}</div>`:`<div class="empty">No se han enfrentado en los datos que tenemos.</div>`}</div>`;
+  return `<div class="box h2h"><h3>Enfrentamientos directos</h3><div class="sub">Últimos ${out.length||10} duelos entre ellos en liga y Champions, de las últimas ~10 temporadas. Solo informativo: el modelo no usa estos resultados. G, E y P se cuentan desde ${esc(h)}.</div>${box}${out.length?`<div>${out.map(m=>matchRow(m,me)).join("")}</div>`:`<div class="empty">No se han enfrentado en liga ni en Champions en los datos que tenemos (unas 10 temporadas).</div>`}</div>`;
 }
 function renderHist(h,a){
   $("scopeH").innerHTML=scopeHtml();
@@ -1897,18 +1934,30 @@ function resCard(team,s){
   const r=s.ms.slice().reverse().map(nrm).map(m=>m.f>m.c?"G":m.f===m.c?"E":"P"), cn=l=>r.filter(x=>x===l).length;
   return `<div class="cc">${ccHead(team,s)}<div class="ccs"><span>Ganó <b class="g">${cn("G")}</b></span><span>Empató <b>${cn("E")}</b></span><span>Perdió <b class="b">${cn("P")}</b></span></div><div class="rl">${r.map(x=>`<i class="${x}">${x}</i>`).join("")}</div><div class="sub" style="margin-top:6px">La letra de la derecha es el partido más reciente.</div></div>`;
 }
+function seasonLbl(d){const y=Math.floor(d/10000),m=Math.floor(d/100)%100,q=m>=7?y:y-1;return q+"/"+String((q+1)%100).padStart(2,"0");}
+/* Duelos directos de los dos equipos: liga (si juegan en la misma) + Champions, de las últimas ~10 temporadas, del más reciente al más antiguo. */
 function h2hRaw(h,a,k){
-  const rh=resolveHist(h), ra=resolveHist(a), out=[];
+  const rh=resolveHist(h), ra=resolveHist(a), out=[], H=DATA.h2h||{};
   if(rh&&ra&&rh.key===ra.key){
-    const L=DATA.leagues[rh.key], i=L.hteams.indexOf(rh.name), j=L.hteams.indexOf(ra.name);
-    for(let q=L.hm.length-1;q>=0&&out.length<k;q--){const m=L.hm[q];
-      if((m[1]===i&&m[2]===j)||(m[1]===j&&m[2]===i))out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],hc:m[5],ac:m[6],kh:m[7]===undefined?-1:m[7],ka:m[8]===undefined?-1:m[8],home:m[1]===i});}
-    if(out.length)return out;
+    const L=DATA.leagues[rh.key], i=L.hteams.indexOf(rh.name), j=L.hteams.indexOf(ra.name), cn=L.name;
+    if(i>=0&&j>=0)for(const m of L.hm)if((m[1]===i&&m[2]===j)||(m[1]===j&&m[2]===i))
+      out.push({d:m[0],h:L.hteams[m[1]],a:L.hteams[m[2]],hg:m[3],ag:m[4],hc:m[5],ac:m[6],kh:m[7]===undefined?-1:m[7],ka:m[8]===undefined?-1:m[8],home:m[1]===i,comp:cn+" "+seasonLbl(m[0])});
+    const S=(H.leagues||{})[rh.key];
+    if(S){const x=S.t.indexOf(rh.name), y=S.t.indexOf(ra.name);
+      if(x>=0&&y>=0)for(const m of S.m)if((m[1]===x&&m[2]===y)||(m[1]===y&&m[2]===x))
+        out.push({d:m[0],h:S.t[m[1]],a:S.t[m[2]],hg:m[3],ag:m[4],hc:-1,ac:-1,kh:-1,ka:-1,home:m[1]===x,comp:cn+" "+seasonLbl(m[0])});}
   }
-  const ch=uclName(h), ca=uclName(a), M=DATA.uclh||[];
-  if(ch&&ca)for(let q=M.length-1;q>=0&&out.length<k;q--){const m=M[q];
-    if((m[1]===ch&&m[2]===ca)||(m[1]===ca&&m[2]===ch))out.push({d:m[0],h:m[1],a:m[2],hg:m[3],ag:m[4],hc:-1,ac:-1,kh:-1,ka:-1,home:m[1]===ch});}
-  return out;
+  const ch=uclName(h), ca=uclName(a);
+  if(ch&&ca&&ch!==ca){
+    for(const m of (DATA.uclh||[]))if(m[5]!=="Previa"&&((m[1]===ch&&m[2]===ca)||(m[1]===ca&&m[2]===ch)))
+      out.push({d:m[0],h:m[1],a:m[2],hg:m[3],ag:m[4],hc:-1,ac:-1,kh:-1,ka:-1,home:m[1]===ch,stage:m[5],note:m[6],comp:"Champions League "+seasonLbl(m[0])});
+    const S=H.ucl;
+    if(S){const x=S.t.indexOf(ch), y=S.t.indexOf(ca);
+      if(x>=0&&y>=0)for(const m of S.m)if((m[1]===x&&m[2]===y)||(m[1]===y&&m[2]===x))
+        out.push({d:m[0],h:S.t[m[1]],a:S.t[m[2]],hg:m[3],ag:m[4],hc:-1,ac:-1,kh:-1,ka:-1,home:m[1]===x,stage:(S.s||[])[m[5]]||"",comp:"Champions League "+seasonLbl(m[0])});}
+  }
+  out.sort((p,q)=>q.d-p.d);
+  return out.slice(0,k);
 }
 /* Líneas de evidencia: cuántas veces se cumplió en los partidos del contexto (local en casa, visitante fuera). */
 function evRows(h,a,test,o){
@@ -1923,10 +1972,10 @@ function evRows(h,a,test,o){
   const g2="Últimos 10 en general (local y visita)";
   if(ph)add1(domMatches(rh,10,"all").map(nrm),h,"general",g2);
   if(pa)add1(domMatches(ra,10,"all").map(nrm),a,"general",g2);
-  if(o.h2h!==false)add1(h2hRaw(h,a,5).map(r=>nrm(o.flip?Object.assign({},r,{home:!r.home}):r)),"Enfrentamientos directos","últimos 5","Entre ellos");
   const ch=uclName(h), ca=uclName(a);   // solo aparecen los equipos que sí tienen partidos de Champions; sin ninguno, no hay fila
   if(o.h!==false&&ch)add1(uclMatches(ch,5).map(nrm),h,"en Champions","Champions League (últimos 5)");
   if(o.a!==false&&ca)add1(uclMatches(ca,5).map(nrm),a,"en Champions","Champions League (últimos 5)");
+  if(o.h2h!==false){const hr=h2hRaw(h,a,10);if(hr.length)add1(hr.map(r=>nrm(o.flip?Object.assign({},r,{home:!r.home}):r)),"Entre sí","últimos "+hr.length+" duelos","Enfrentamientos directos (H2H)");}
   return rows;
 }
 function evCard(title,rows,note){
