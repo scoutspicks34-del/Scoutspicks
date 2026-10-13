@@ -26,3 +26,7 @@ Si cambias `sw.js`, sube el número de `V` para que los teléfonos descarten la 
 - Noruega, MLS y Liga MX: archivos "new" de football-data.co.uk (solo goles y cuotas); los últimos días se completan con ESPN/TheSportsDB.
 - Arabia: ESPN (marcadores del año actual y los dos anteriores; copia en `data/espn_arabia.csv` por si ESPN falla). Sin cuotas.
 - El modelo de estas ligas no está validado con partidos pasados (`val: false`); la página lo avisa en "Cómo se calculó".
+
+## Historial europeo en los enfrentamientos directos
+`data/h2h_hist.json` incluye Champions, Europa League y Conference League (openfootball, ~10 temporadas, sin previas). Para regenerar solo la parte europea:
+`PYTHONPATH=. python3 h2hhist.py <carpeta openfootball> data/h2h_hist.json --ucl-only`

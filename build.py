@@ -1080,8 +1080,9 @@ def h2h_data(params, uclh):
     if src and uclh:
         names = set(UCL_TEAMS) | {r[1] for r in uclh} | {r[2] for r in uclh}
         cut = min([r[0] for r in uclh if r[5] != "Previa"] or [99999999])
-        keep = [m for m in src["m"] if m[0] < cut and src["t"][m[1]] in names and src["t"][m[2]] in names]
-        res["ucl"] = pack(src, keep, {"s": src["s"]})
+        # Champions: solo lo anterior a los datos recientes (esos ya vienen en uclh). Europa y Conference no están en uclh, van completas.
+        keep = [m for m in src["m"] if (m[0] < cut or (len(m) > 6 and m[6] > 0)) and src["t"][m[1]] in names and src["t"][m[2]] in names]
+        res["ucl"] = pack(src, keep, {"s": src["s"], "c": src.get("c", ["Champions League"])})
     n = sum(len(v["m"]) for v in res["leagues"].values()) + (len(res["ucl"]["m"]) if res["ucl"] else 0)
     log(f"  historial H2H: {n} partidos de temporadas anteriores")
     return res
@@ -2005,7 +2006,7 @@ function h2hHtml(h,a){
     const t=(v,lab)=>`<div><b>${v}</b><span>${lab}</span></div>`, pc=x=>Math.round(100*x/n)+"%";
     box=`<div class="sumg h2">${t(w+"G "+d+"E "+l+"P","Balance de "+esc(h)+" (ganó, empató, perdió)")}${t(gf.toFixed(1)+" – "+gc.toFixed(1)+" ("+(gf+gc).toFixed(1)+" total)","Goles por duelo ("+esc(h)+" – "+esc(a)+")")}${t(o+" de "+n+" partidos ("+pc(o)+")","Más de 2.5 goles")}${t(bt+" de "+n+" partidos ("+pc(bt)+")","Ambos anotaron")}</div>`;
   }
-  return `<div class="box h2h"><h3>Enfrentamientos directos</h3><div class="sub">Últimos ${out.length||10} duelos entre ellos en liga y Champions, de las últimas ~10 temporadas. Solo informativo: el modelo no usa estos resultados. G, E y P se cuentan desde ${esc(h)}.</div>${box}${out.length?`<div>${out.map(m=>matchRow(m,me)).join("")}</div>`:`<div class="empty">No se han enfrentado en liga ni en Champions en los datos que tenemos (unas 10 temporadas).</div>`}</div>`;
+  return `<div class="box h2h"><h3>Enfrentamientos directos</h3><div class="sub">Últimos ${out.length||10} duelos entre ellos en liga, Champions, Europa League y Conference League, de las últimas ~10 temporadas. Solo informativo: el modelo no usa estos resultados. G, E y P se cuentan desde ${esc(h)}.</div>${box}${out.length?`<div>${out.map(m=>matchRow(m,me)).join("")}</div>`:`<div class="empty">No se han enfrentado en liga ni en torneos europeos (Champions, Europa League, Conference) en los datos que tenemos (unas 10 temporadas).</div>`}</div>`;
 }
 function renderHist(h,a){
   $("scopeH").innerHTML=scopeHtml();
@@ -2146,7 +2147,7 @@ function h2hRaw(h,a,k){
     const S=H.ucl;
     if(S){const x=S.t.indexOf(ch), y=S.t.indexOf(ca);
       if(x>=0&&y>=0)for(const m of S.m)if((m[1]===x&&m[2]===y)||(m[1]===y&&m[2]===x))
-        out.push({d:m[0],h:S.t[m[1]],a:S.t[m[2]],hg:m[3],ag:m[4],hc:-1,ac:-1,kh:-1,ka:-1,home:m[1]===x,stage:(S.s||[])[m[5]]||"",comp:"Champions League "+seasonLbl(m[0])});}
+        out.push({d:m[0],h:S.t[m[1]],a:S.t[m[2]],hg:m[3],ag:m[4],hc:-1,ac:-1,kh:-1,ka:-1,home:m[1]===x,stage:(S.s||[])[m[5]]||"",comp:((S.c||[])[m[6]||0]||"Champions League")+" "+seasonLbl(m[0])});}
   }
   out.sort((p,q)=>q.d-p.d);
   return out.slice(0,k);

@@ -48,7 +48,40 @@ def league_rows(text, y0):
 
 
 def stage_h2h(st):
-    return "Fase de grupos" if st.startswith(("Group", "Gruppe")) else st
+    low = st.lower()
+    if st.startswith(("Group", "Gruppe")):
+        return "Fase de grupos"
+    if "round of 32" in low or "sechzehntel" in low:
+        return "Dieciseisavos"
+    if "play-off" in low or "playoff" in low:
+        return "Play-offs"
+    return st
+
+
+COMPS = ["Champions League", "Europa League", "Conference League"]
+UCL_FILES = (("cl.txt", 0, False), ("clq.txt", 0, True), ("el.txt", 1, False), ("conf.txt", 2, False))
+
+
+def ucl_part(root, known_ucl):
+    """Duelos de Champions, Europa League y Conference League (sin previas) entre clubes conocidos."""
+    known, rows, stages = set(known_ucl), [], []
+    for y in SEASONS:
+        for fn, comp, pre in UCL_FILES:
+            try:
+                txt = open(f"{root}/champions-league/{y}-{(y + 1) % 100:02d}/{fn}", encoding="utf8").read()
+            except OSError:
+                continue
+            for d, h, a, x, y2, st, note in uclhist.parse(txt, y, pre):
+                mh = B.UCL_ALIAS.get(B.norm(h)) or (h if h in known else None)
+                ma = B.UCL_ALIAS.get(B.norm(a)) or (a if a in known else None)
+                if mh in known and ma in known and mh != ma and not pre:
+                    rows.append((d, mh, ma, x, y2, stage_h2h(st), comp))
+    t = sorted({r[1] for r in rows} | {r[2] for r in rows}); ix = {n: i for i, n in enumerate(t)}
+    for r in rows:
+        if r[5] not in stages:
+            stages.append(r[5])
+    print("ucl+europa", len(rows), "partidos,", len(t), "equipos, fases:", stages, "por torneo:", [sum(1 for r in rows if r[6] == c) for c in range(3)])
+    return {"t": t, "s": stages, "c": COMPS, "m": [[d, ix[h], ix[a], x, y2, stages.index(st), c] for d, h, a, x, y2, st, c in sorted(rows)]}
 
 
 def smap(name, known):
@@ -84,30 +117,20 @@ def make(root, known_leagues, known_ucl, out):
         t = sorted({r[1] for r in rows} | {r[2] for r in rows}); ix = {n: i for i, n in enumerate(t)}
         res["leagues"][key] = {"t": t, "m": [[d, ix[h], ix[a], x, y2] for d, h, a, x, y2 in sorted(rows)]}
         print(key, len(rows), "partidos,", len(t), "equipos; sin equivalencia (top):", sorted(bad.items(), key=lambda z: -z[1])[:12])
-    known, rows, stages = set(known_ucl), [], []
-    for y in SEASONS:
-        for fn, pre in (("cl.txt", False), ("clq.txt", True)):
-            try:
-                txt = open(f"{root}/champions-league/{y}-{(y + 1) % 100:02d}/{fn}", encoding="utf8").read()
-            except OSError:
-                continue
-            for d, h, a, x, y2, st, note in uclhist.parse(txt, y, pre):
-                mh = B.UCL_ALIAS.get(B.norm(h)) or (h if h in known else None)
-                ma = B.UCL_ALIAS.get(B.norm(a)) or (a if a in known else None)
-                if mh in known and ma in known and mh != ma and not pre:
-                    rows.append((d, mh, ma, x, y2, stage_h2h(st)))
-    t = sorted({r[1] for r in rows} | {r[2] for r in rows}); ix = {n: i for i, n in enumerate(t)}
-    for r in rows:
-        if r[5] not in stages:
-            stages.append(r[5])
-    res["ucl"] = {"t": t, "s": stages, "m": [[d, ix[h], ix[a], x, y2, stages.index(st)] for d, h, a, x, y2, st in sorted(rows)]}
-    print("ucl", len(rows), "partidos,", len(t), "equipos, fases:", stages)
+    res["ucl"] = ucl_part(root, known_ucl)
     json.dump(res, open(out, "w", encoding="utf8"), ensure_ascii=False, separators=(",", ":"))
 
 
 if __name__ == "__main__":
     import glob
     import pandas as pd
+    if len(sys.argv) > 3 and sys.argv[3] == "--ucl-only":      # rehace solo la parte europea y conserva las ligas ya generadas
+        uh = json.load(open("data/ucl_hist.json"))["m"]
+        ku = set(B.UCL_TEAMS) | {r[1] for r in uh} | {r[2] for r in uh}
+        old = json.load(open(sys.argv[2], encoding="utf8"))
+        old["ucl"] = ucl_part(sys.argv[1], ku)
+        json.dump(old, open(sys.argv[2], "w", encoding="utf8"), ensure_ascii=False, separators=(",", ":"))
+        sys.exit(0)
     S = "/tmp/claude-0/-home-claude/ca15f016-79f3-52ce-b32c-602dd5479c11/scratchpad/"
     loc = {"bundesliga": S + "bl_data", "premier": S + "pl_data", "laliga": S + "sp_data"}
     kl = {}
