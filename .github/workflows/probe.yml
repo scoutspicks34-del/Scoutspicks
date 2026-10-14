@@ -1,0 +1,38 @@
+name: Probe ligas nuevas
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descargar muestras
+        run: |
+          mkdir -p probe
+          UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36"
+          g(){ n="$1"; u="$2"; code=$(curl -sL -m 60 -A "$UA" -o "probe/$n" -w "%{http_code} %{size_download}" "$u" || echo ERR); echo "$n $u $code" >> probe/log.txt; sleep 1; }
+          E=https://site.api.espn.com/apis/site/v2/sports/soccer
+          g uel_range.json "$E/uefa.europa/scoreboard?dates=20260901-20261031&limit=500"
+          g uel_next.json "$E/uefa.europa/scoreboard?dates=20261014-20261105&limit=500"
+          g uel_2025.json "$E/uefa.europa/scoreboard?dates=20250901-20260531&limit=1000"
+          g uel_teams.json "$E/uefa.europa/teams"
+          g uel_standings.json "https://site.api.espn.com/apis/v2/sports/soccer/uefa.europa/standings"
+          g l3_2026.json "$E/ger.3/scoreboard?dates=2026&limit=1000"
+          g l3_2025.json "$E/ger.3/scoreboard?dates=2025&limit=1000"
+          g l3_2024.json "$E/ger.3/scoreboard?dates=2024&limit=1000"
+          g l3_next.json "$E/ger.3/scoreboard?dates=20261014-20261031&limit=200"
+          g l3_teams.json "$E/ger.3/teams"
+          g clubelo.csv "http://api.clubelo.com/2026-10-14"
+          g oldb_bl3.json "https://api.openligadb.de/getmatchdata/bl3/2026"
+          g tsdb_leagues.json "https://www.thesportsdb.com/api/v1/json/3/search_all_leagues.php?c=Germany&s=Soccer"
+          g of_el.txt "https://raw.githubusercontent.com/openfootball/europe-league/master/2026-27/el.txt"
+          g fdnew_ger.csv "https://www.football-data.co.uk/new/GER.csv"
+      - name: Subir a rama probe
+        run: |
+          git config user.name "picks-fresh-bot"; git config user.email "bot@users.noreply.github.com"
+          git checkout -b probe
+          git add -f probe
+          git commit -m "probe ligas"
+          git push -f origin probe
