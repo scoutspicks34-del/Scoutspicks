@@ -43,3 +43,7 @@ Desde el navegador: la clave se pega en la página y vive solo en `localStorage`
 ## Picks sugeridos y armador de parlays
 - Resumen: tarjeta "Picks sugeridos" por partido (pick de valor si hay EV>0, prob. ≥38% y sin alerta de error del modelo; si no, pick de probabilidad 60–74% con cuota justa 1.35–1.85; y un "fijo para parlay" de 75–92%).
 - Destacados → "Armador de Parlays": escanea los partidos del día (todas las ligas, que no hayan empezado) y arma Seguro, Equilibrado y de Valor. Una selección por partido; probabilidad = producto de las individuales. Mi parlay se guarda en `localStorage`.
+
+## Bajas y Sanciones Clave (manual y local)
+Reemplaza el panel de lesionados y el ajuste de −7%. Tres botones por equipo (estrella ofensiva −15% goles propios; mediocampo −8% propios y +4% rival; defensa/portero +12% rival). Se acumulan. En ligas con Poisson mueven los goles esperados; en la Champions sin cuotas mueven el Elo (−35, −20, −25). Todo se calcula en el navegador, sin ninguna fuente externa. No están validados con partidos pasados.
+No hay conexión con API-Football: se eliminó el código, la clave del workflow y el campo de lesionados.

@@ -19,7 +19,6 @@ jobs:
       - run: pip install pandas numpy scipy requests
       - run: python build.py
         env:
-          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
           FOOTBALL_DATA_ORG_KEY: ${{ secrets.FOOTBALL_DATA_ORG_KEY }}
       - name: Guardar la página
         run: |

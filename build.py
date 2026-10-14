@@ -9,11 +9,11 @@ from scipy.optimize import minimize
 import uclhist
 
 LEAGUES = {
-    "bundesliga": dict(name="Bundesliga", code="D1", api=78),
-    "premier": dict(name="Premier League", code="E0", api=39),
-    "laliga": dict(name="La Liga", code="SP1", api=140),
+    "bundesliga": dict(name="Bundesliga", code="D1"),
+    "premier": dict(name="Premier League", code="E0"),
+    "laliga": dict(name="La Liga", code="SP1"),
     # ligas nuevas: solo goles (y en Holanda también córners, tiros y tarjetas); el modelo no se ha validado con partidos pasados
-    "eredivisie": dict(name="Eredivisie (Holanda)", code="N1", api=88, tbl="euro", new=True),
+    "eredivisie": dict(name="Eredivisie (Holanda)", code="N1", tbl="euro", new=True),
     "noruega": dict(name="Eliteserien (Noruega)", code="NOR", src="fdnew", cc="NOR", tbl="cal", new=True),
     "arabia": dict(name="Liga de Arabia", code="KSA", src="espn", slug="ksa.1", tbl="euro", new=True),
     "mls": dict(name="MLS (EE. UU.)", code="USA", src="fdnew", cc="USA", tbl="cal", new=True),
@@ -23,8 +23,6 @@ BT_W = 0.5   # peso del modelo en "ambos anotan" (el resto va a la tasa históri
 REG_M = {"shots": 80.0}   # regularización por mercado (por defecto 40); tiros totales mejoró con 80 en la prueba con partidos pasados
 MARKETS = {"corners": ("HC", "AC"), "sot": ("HST", "AST"), "shots": ("HS", "AS")}
 KEEP = ["Date", "HomeTeam", "AwayTeam", "FTHG", "FTAG", "HS", "AS", "HST", "AST", "HC", "AC", "HY", "AY", "HR", "AR"]
-API = "https://v3.football.api-sports.io"
-KEY = os.environ.get("API_FOOTBALL_KEY", "").strip()
 HN = dt.timedelta(hours=-6)  # Honduras UTC-6
 LOG = []
 
@@ -231,7 +229,7 @@ def league_params(df, ref):
            int(c1) if pd.notna(c1) else -1, int(c2) if pd.notna(c2) else -1, k1, k2]
           for d, h, a, x, y, c1, c2, k1, k2 in zip(df.Date, df.HomeTeam, df.AwayTeam, df.FTHG, df.FTAG, hcs, acs, hks, aks)]
     return {"updated": str(df.Date.max().date()), "n": int(len(df)), "models": models,
-            "teams": teams, "form": form, "inj": None, "hteams": ht, "hm": hm}
+            "teams": teams, "form": form, "hteams": ht, "hm": hm}
 
 
 # ------------------------------------------------------------------ nombres
@@ -559,108 +557,6 @@ def recent_results(params, uclh, today, days=3):
     return out
 
 
-# ------------------------------------------------------------------ API
-def api(path, params):
-    if not KEY:
-        return None
-    try:
-        r = requests.get(API + path, headers={"x-apisports-key": KEY}, params=params, timeout=40)
-        j = r.json()
-    except Exception as e:  # noqa: BLE001
-        log(f"  API {path}: error de conexión ({e})")
-        return None
-    errs = j.get("errors")
-    if errs:
-        log(f"  API {path} {params}: {errs}")
-        return None
-    return j.get("response", [])
-
-
-def parse_odds(resp):
-    acc = {}
-    for item in resp or []:
-        for bk in item.get("bookmakers", []):
-            for bet in bk.get("bets", []):
-                n = str(bet.get("name", "")).lower()
-                for v in bet.get("values", []):
-                    try:
-                        o = float(v["odd"])
-                    except Exception:  # noqa: BLE001
-                        continue
-                    val = str(v.get("value", "")).strip().lower()
-                    k = None
-                    m = re.match(r"(over|under) ([\d.]+)$", val)
-                    if n == "match winner":
-                        k = {"home": "1", "draw": "X", "away": "2"}.get(val)
-                    elif n == "goals over/under" and m:
-                        k = f"{m[1][0]}:goals:{m[2]}"
-                    elif n == "both teams score":
-                        k = {"yes": "btts:y", "no": "btts:n"}.get(val)
-                    elif "corner" in n and m and not any(w in n for w in ("1st", "2nd", "half", "asian", "team", "home", "away")):
-                        k = f"{m[1][0]}:corners:{m[2]}"
-                    if k:
-                        acc.setdefault(k, []).append(o)
-    return {k: round(sum(v) / len(v), 2) for k, v in acc.items()}
-
-
-def api_enrich(params, today):
-    """Agrega partidos próximos, lesionados y cuotas. Si algo falla, la página funciona igual."""
-    note = "Sin clave de API: la página usa solo el modelo y tus cuotas."
-    fixtures = []
-    if not KEY:
-        return fixtures, note
-    season = today.year if today.month >= 7 else today.year - 1
-    by_id = {v["api"]: k for k, v in LEAGUES.items()}
-    calls_ok = 0
-    for d in (today, today + dt.timedelta(days=1)):
-        resp = api("/fixtures", {"date": d.isoformat(), "timezone": "America/Tegucigalpa"})
-        if resp is None:
-            continue
-        calls_ok += 1
-        for f in resp:
-            lid = f["league"]["id"]
-            if lid not in by_id:
-                continue
-            key = by_id[lid]
-            teams = params[key]["teams"]
-            h, a = match_team(f["teams"]["home"]["name"], teams), match_team(f["teams"]["away"]["name"], teams)
-            if not h or not a:
-                log(f"  sin equivalencia de nombre: {f['teams']['home']['name']} / {f['teams']['away']['name']}")
-                continue
-            fixtures.append({"id": f["fixture"]["id"], "lg": key, "date": f["fixture"]["date"][:16],
-                             "status": f["fixture"]["status"]["short"], "h": h, "a": a, "odds": {}})
-    for key, v in LEAGUES.items():
-        resp = api("/injuries", {"league": v["api"], "season": season})
-        if resp is None:
-            continue
-        inj = {}
-        for it in resp:
-            t = match_team(it["team"]["name"], params[key]["teams"])
-            if t:
-                pl = it["player"]
-                row = [pl.get("name", "?"), pl.get("reason") or pl.get("type") or ""]
-                if row not in inj.setdefault(t, []):
-                    inj[t].append(row)
-        params[key]["inj"] = inj
-    n_odds = 0
-    for f in sorted(fixtures, key=lambda x: x["date"])[:25]:
-        if f["status"] not in ("NS", "TBD"):
-            continue
-        resp = api("/odds", {"fixture": f["id"]})
-        if resp:
-            f["odds"] = parse_odds(resp)
-            n_odds += bool(f["odds"])
-    fixtures.sort(key=lambda x: x["date"])
-    if calls_ok == 0:
-        errs = [l.strip() for l in LOG if l.strip().startswith("API")]
-        note = "La API no respondió (revisa la clave o el plan). La página usa solo el modelo y tus cuotas. Detalle: " + (errs[0][:300] if errs else "sin detalle")
-    elif not fixtures:
-        note = "La API respondió, pero no hay partidos de estas ligas hoy ni mañana."
-    else:
-        note = f"{len(fixtures)} partidos próximos. Cuotas cargadas en {n_odds}."
-    return fixtures, note
-
-
 def csv_fixtures(params, today, text=None):
     """Próximos partidos y cuotas promedio desde football-data.co.uk/fixtures.csv (sin clave)."""
     from zoneinfo import ZoneInfo
@@ -949,7 +845,7 @@ def ucl_params(today, text=None):
         log("  clubelo no responde: se usa el Elo guardado del " + STATIC_ELO_DATE)
         elo = {k: float(v) for k, v in STATIC_ELO.items()}
         return {"name": "Champions League", "kind": "elo", "elo": elo, "hfa": 100, "T": 2.9,
-                "updated": STATIC_ELO_DATE, "n": 0, "models": {}, "teams": sorted(elo), "form": {}, "inj": None}
+                "updated": STATIC_ELO_DATE, "n": 0, "models": {}, "teams": sorted(elo), "form": {}}
     try:
         df = pd.read_csv(io.StringIO(text))
         table = {norm(str(c)): float(e) for c, e in zip(df["Club"], df["Elo"])}
@@ -972,7 +868,7 @@ def ucl_params(today, text=None):
         log("  Elo: demasiados equipos sin dato; se omite la Champions")
         return None
     return {"name": "Champions League", "kind": "elo", "elo": elo, "hfa": 100, "T": 2.9,
-            "updated": today.isoformat(), "n": 0, "models": {}, "teams": sorted(elo), "form": {}, "inj": None}
+            "updated": today.isoformat(), "n": 0, "models": {}, "teams": sorted(elo), "form": {}}
 
 
 def ucl_fixtures(params, today):
@@ -1119,17 +1015,14 @@ def build(template, out_path="docs/index.html"):
         u["map"] = ucl_domestic(params)
         log("  Champions con historial local: " + ", ".join(sorted(u["map"])))
         params["ucl"] = u
-    if os.environ.get("USE_API_FOOTBALL") == "1":
-        fixtures, note = api_enrich(params, today)
-    else:
-        fixtures, note = csv_fixtures(params, today)
-        fx2 = extra_fixtures(params, today)
-        have = {(f["lg"], f["h"], f["a"]) for f in fixtures}
-        fixtures = fixtures + [f for f in fx2 if (f["lg"], f["h"], f["a"]) not in have]
-        for i, f in enumerate(fixtures):
-            f["id"] = i + 1
-        if fx2:
-            note += f" Ligas nuevas: {len(fx2)} partidos (football-data y ESPN)."
+    fixtures, note = csv_fixtures(params, today)
+    fx2 = extra_fixtures(params, today)
+    have = {(f["lg"], f["h"], f["a"]) for f in fixtures}
+    fixtures = fixtures + [f for f in fx2 if (f["lg"], f["h"], f["a"]) not in have]
+    for i, f in enumerate(fixtures):
+        f["id"] = i + 1
+    if fx2:
+        note += f" Ligas nuevas: {len(fx2)} partidos (football-data y ESPN)."
     for f in fixtures:
         M = params.get(f["lg"], {}).get("models", {}).get("goles") if f.get("odds") else None
         if M and f["h"] in M["att"] and f["a"] in M["att"]:
@@ -1306,7 +1199,6 @@ details[open]>summary::after{transform:rotate(-135deg)}
 .oddsin input{text-align:center;font:800 22px/1 var(--disp);font-stretch:80%;padding:12px 6px}
 .how p{font-size:14.5px;color:var(--muted);margin-top:8px}
 .how summary{font-weight:700;font-size:15px;padding:4px 0}
-.adj{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .none{font-size:14px;color:var(--muted)}
 
 /* ---- historial ---- */
@@ -1450,6 +1342,12 @@ ul.exp b{font-weight:800}
 #apiSt{margin-top:8px;line-height:1.45} #apiSt.err{color:var(--bad)} #apiSt.ok b{color:var(--good)}
 #apiRem{font-size:12px;margin-top:4px}
 .linkb{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;font:inherit;cursor:pointer}
+#bajas h3{margin-bottom:2px}
+.bjt{font-weight:800;font-size:15px;margin-top:14px}
+.bjb{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--paper);border-radius:12px;padding:11px 12px;margin-top:8px;font-size:14px;font-weight:600;line-height:1.35}
+.bjb[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:var(--sel)}
+.bjsum{margin-top:12px;font-size:14px;line-height:1.5}
+.bjsum .bf{color:var(--muted)}
 .psg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:4px;margin:12px 0}
 .psg button{border:0;background:transparent;border-radius:10px;padding:10px 4px;font-weight:700;font-size:14px}
 .psg button[aria-pressed="true"]{background:var(--sel);color:var(--on-sel)}
@@ -1648,6 +1546,7 @@ ul.exp b{font-weight:800}
         </div>
         <div class="box" id="expect" hidden></div>
         <div class="box picks" id="picks" hidden></div>
+        <div class="box" id="bajas"></div>
         <div class="box">
           <h3>Cuotas de tu casa</h3>
           <div class="sub">Escribe las cuotas que te da tu casa de apuestas y recalculamos las probabilidades quitándoles el margen de la casa.</div>
@@ -1664,16 +1563,6 @@ ul.exp b{font-weight:800}
         </div>
         <div class="box how">
           <details id="how"><summary>Cómo se calculó</summary><div id="howTxt"></div></details>
-        </div>
-        <div class="box how">
-          <details><summary>Bajas y ajuste manual</summary>
-            <div id="inj" style="margin-top:10px"></div>
-            <p>Si hay bajas importantes, puedes bajar el ataque del equipo. Es una opinión tuya y no está validada.</p>
-            <div class="adj">
-              <label class="f">Local<select id="adjH"><option value="0">Sin ajuste</option><option value="1">1 baja clave (−7% ataque)</option><option value="2">2 bajas clave (−14%)</option><option value="3">3 bajas clave (−21%)</option></select></label>
-              <label class="f">Visitante<select id="adjA"><option value="0">Sin ajuste</option><option value="1">1 baja clave (−7% ataque)</option><option value="2">2 bajas clave (−14%)</option><option value="3">3 bajas clave (−21%)</option></select></label>
-            </div>
-          </details>
         </div>
       </div>
 
@@ -1800,11 +1689,11 @@ function eloLam(E,T){
 }
 
 /* ---------- cálculo de un partido ---------- */
-function compute(h, a, fh, fa, ml){
+function compute(h, a, fh, fa, ml, dh, da){
   const L = DATA.leagues[league], out = {rows:[], chips:[]};
   let l0;
   if(ml){ l0=ml; }
-  else if(L.kind==="elo"){ const E=1/(1+Math.pow(10,-((L.elo[h]+L.hfa-L.elo[a])/400))); l0=eloLam(E,L.T); }
+  else if(L.kind==="elo"){ const E=1/(1+Math.pow(10,-((L.elo[h]+(dh||0)+L.hfa-L.elo[a]-(da||0))/400))); l0=eloLam(E,L.T); }
   else { l0=lam(L.models.goles,h,a); }
   const rho = (!ml && L.kind!=="elo" && L.models.goles.rho) || 0;   // con cuotas o Elo no se aplica: esos goles esperados ya vienen de otro cálculo
   const lh = l0[0]*fh, la = l0[1]*fa, m = scoreMatrix(lh,la,rho);
@@ -1982,14 +1871,6 @@ function formHtml(t){
   return f.split("").filter(Boolean).map(c=>`<i class="${c}">${c}</i>`).join("");
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
-function injHtml(h,a){
-  const L=DATA.leagues[league];
-  if(!L.inj) return `<div class="none">Lesionados: no se cargan automáticamente. Usa el ajuste manual de abajo si hay bajas importantes.</div>`;
-  const one=t=>{const l=L.inj[t]||[];
-    return l.length?`<div><b>${esc(t)}</b>: ${l.map(x=>esc(x[0])+(x[1]?" ("+esc(x[1])+")":"")).join(", ")}</div>`
-                   :`<div class="none"><b>${esc(t)}</b>: sin bajas reportadas</div>`;};
-  return one(h)+one(a);
-}
 /* ---------- recalcular con las cuotas que escribe el usuario ---------- */
 let userOdds={}, userMatch="";
 function nm(f,x0,iter){
@@ -2478,7 +2359,7 @@ function legsFor(f){                          // mercados de un partido con las 
     const key=f.lg+"|"+f.h+"|"+f.a, af=apiStore[key];
     let odds=Object.assign({},f.odds,af&&af.odds), ml=(af&&af.ml)||f.ml||null;
     if(key===userMatch){const u=mlFromOdds(userOdds); if(u)ml=u; odds=Object.assign({},odds,userOdds);}
-    const c=compute(f.h,f.a,1,1,ml);
+    const ba=key===userMatch?bajArgs(DATA.leagues[f.lg],ml):[1,1,0,0], c=compute(f.h,f.a,ba[0],ba[1],ml,ba[2],ba[3]);
     return pkCands(c.rows,r=>{const v=odds[rowKey(r)]!==undefined?odds[rowKey(r)]:(r.key?odds[r.key]:undefined); return v>1?v:NaN;});
   }catch(e){return [];}
   finally{league=saved;}
@@ -2747,19 +2628,50 @@ function updTxt(){
   $("upd").innerHTML=(L.kind==="elo"?"Ranking Elo del "+esc(L.updated):"Datos hasta "+esc(L.updated))+"<br>Actualizado "+esc((DATA.generated||"—").slice(0,16));
 }
 function fitName(el){const n=el.textContent.length; el.style.fontSize=(n<=7?34:n<=10?29:n<=13?25:21)+"px";}
+/* ---------- 🚑 Bajas y Sanciones Clave (manual y local) ---------- */
+const BJ=[["s","⭐ Baja Estrella Ofensiva (-15% goles esperados / -35 Elo)"],["m","🧠 Baja Mediocampo Clave (-8% goles esperados / +4% goles rival / -20 Elo)"],["d","🛡️ Baja Defensa Titular o Portero (+12% goles rival / -25 Elo)"]];
+let baj={h:{s:0,m:0,d:0},a:{s:0,m:0,d:0}};
+function bajReset(){baj={h:{s:0,m:0,d:0},a:{s:0,m:0,d:0}};}
+function bajAny(){return ["h","a"].some(k=>baj[k].s||baj[k].m||baj[k].d);}
+function bajArgs(L,ml){                       // [factor goles local, factor goles visitante, delta Elo local, delta Elo visitante]
+  const H=baj.h, A=baj.a;
+  const fh=(H.s?0.85:1)*(H.m?0.92:1)*(A.d?1.12:1)*(A.m?1.04:1), fa=(A.s?0.85:1)*(A.m?0.92:1)*(H.d?1.12:1)*(H.m?1.04:1);
+  const dh=-(35*H.s+20*H.m+25*H.d), da=-(35*A.s+20*A.m+25*A.d);
+  return (L.kind==="elo"&&!ml)?[1,1,dh,da]:[fh,fa,0,0];   // Champions sin cuotas: el ajuste va al Elo; en los demás casos, a los goles esperados
+}
+function renderBajas(h,a,base,fin){
+  const L=DATA.leagues[league], box=$("bajas");
+  if(fin){box.innerHTML="";box.hidden=true;return;}
+  box.hidden=false;
+  const side=(k,t)=>`<div class="bjt">${esc(t)} <span class="sub">(${k==="h"?"local":"visitante"})</span></div>`+BJ.map(([c,lbl])=>`<button class="bjb" type="button" data-k="${k}" data-c="${c}" aria-pressed="${baj[k][c]?"true":"false"}">${lbl}</button>`).join("");
+  let sum="";
+  if(bajAny()){
+    const [pH,pD,pA]=cur.p, [bH,bD,bA]=base.p, d=(x,y)=>`${pct(y)} → <b>${pct(x)}</b>`;
+    sum=`<div class="bjsum"><div>Gana ${esc(h)}: <span class="bf">${d(pH,bH)}</span></div><div>Empate: <span class="bf">${d(pD,bD)}</span></div><div>Gana ${esc(a)}: <span class="bf">${d(pA,bA)}</span></div>
+      <div>Goles esperados: ${esc(h)} <span class="bf">${base.lh.toFixed(2)} → <b>${cur.lh.toFixed(2)}</b></span> · ${esc(a)} <span class="bf">${base.la.toFixed(2)} → <b>${cur.la.toFixed(2)}</b></span></div></div>`
+      +(L.kind==="elo"&&!cur.fromMkt?`<div class="sub" style="margin-top:8px">En la Champions sin cuotas el ajuste mueve el Elo de cada club (y de ahí los goles esperados).</div>`:"")
+      +(cur.fromMkt?`<div class="flag" style="margin-top:8px">Las probabilidades salen de cuotas del mercado, que normalmente ya incluyen las bajas conocidas. Si activas aquí una baja que la casa ya conoce, se cuenta dos veces.</div>`:"");
+  }
+  box.innerHTML=`<h3>🚑 Bajas y Sanciones Clave</h3><div class="sub">Actívalas a mano si falta alguien importante. Se suman si activas varias y recalculan al instante probabilidades, cuotas justas, valor esperado y stake. Son porcentajes fijos, no están validados con partidos pasados.</div>`+side("h",h)+side("a",a)+sum;
+}
+$("bajas").addEventListener("click",ev=>{
+  const b=ev.target.closest("button[data-k]"); if(!b)return;
+  baj[b.dataset.k][b.dataset.c]^=1; render();
+});
+
 function render(){
   const h=$("home").value,a=$("away").value,L=DATA.leagues[league];
   updTxt();
   if(h===a)return;
-  const fh=1-0.07*(+$("adjH").value), fa=1-0.07*(+$("adjA").value);
   const fxs=(DATA.fixtures||[]).filter(f=>f.lg===league&&f.h===h&&f.a===a), fx0=fxs.find(f=>!f.score)||fxs[0];
   const af=apiStore[league+"|"+h+"|"+a]&&!(fx0&&fx0.score)?apiStore[league+"|"+h+"|"+a]:null;     // cuotas cargadas desde The Odds API (solo en memoria; no tocan DATA)
   const fx=af?Object.assign({},fx0||{lg:league,h:h,a:a,date:af.date,status:"NS"},{odds:Object.assign({},fx0&&fx0.odds,af.odds),ml:af.ml||(fx0&&fx0.ml)||null}):fx0;
   const fin=fx&&fx.score;
-  const mk0=league+"|"+h+"|"+a; if(mk0!==userMatch){userOdds={};userMatch=mk0;}
+  const mk0=league+"|"+h+"|"+a; if(mk0!==userMatch){userOdds={};userMatch=mk0;bajReset();}
   const uml=mlFromOdds(userOdds);
   const ml=uml||(fx&&fx.ml?fx.ml:null);
-  cur=compute(h,a,fh,fa,ml); cur.src=uml?"user":(ml?"fx":null);
+  const [fh,fa,dh,da]=bajArgs(L,ml);
+  cur=compute(h,a,fh,fa,ml,dh,da); cur.src=uml?"user":(ml?"fx":null);
   $("hMeta").textContent=L.name+(fin?" · Final "+fx.score[0]+"–"+fx.score[1]:fx?" · "+dtxt(fx.date):"");
   $("hn").textContent=h; $("an").textContent=a; fitName($("hn")); fitName($("an"));
   $("hf").innerHTML=formHtml(h); $("af").innerHTML=formHtml(a);
@@ -2800,7 +2712,7 @@ function render(){
   if(!cur.fromMkt&&L.kind!=="elo"&&L.val!==false) how.push("Rango típico de error del modelo: ±8 puntos en el 1X2 (en 2.300 partidos pasados, la diferencia con las casas fue menor a eso el 80% de las veces).");
   if(L.val===false&&!cur.fromMkt) how.push("Esta liga se agregó hace poco y el modelo no se ha validado con partidos pasados como en Bundesliga, Premier y La Liga, así que el error puede ser mayor. "+(L.models.corners?"":"Solo hay modelo de goles: no tenemos córners, tiros ni tarjetas de esta liga."));
   $("howTxt").innerHTML=how.map(x=>`<p>${esc(x)}</p>`).join("");
-  $("inj").innerHTML=L.kind==="elo"?`<div class="none">Champions League: las probabilidades salen del ranking Elo de los clubes (sin córners ni tiros, porque no hay datos comparables entre ligas). No están validadas con partidos pasados.</div>`:injHtml(h,a);
+  renderBajas(h,a,bajAny()?compute(h,a,1,1,ml):null,fin);
   renderHist(h,a); renderStats(h,a,fx); renderTable(h,a);
   const ex=$("expect"); ex.innerHTML=expectHtml(h,a,cur,fin); ex.hidden=!ex.innerHTML;
   // mercados
@@ -2870,7 +2782,7 @@ function setTab(t){
   if(window.scrollY>y)window.scrollTo(0,y);
 }
 function openMatch(h,a,t){
-  $("home").value=h; $("away").value=a; $("adjH").value="0"; $("adjA").value="0";
+  $("home").value=h; $("away").value=a; bajReset();
   histTeam="h";
   // Champions: si algún equipo tiene menos de 4 partidos de Champions en los datos, se abre en "Todos" (liga local + Champions)
   const nU=t=>{const c=uclName(t);return c?uclMatches(c,4).length:0;};
@@ -2922,7 +2834,6 @@ $("pTrend").addEventListener("click",ev=>{
   else return;
   redrawStats();
 });
-$("adjH").addEventListener("change",render); $("adjA").addEventListener("change",render);
 /* Cuotas de Resumen <-> Tu cuota de Apostar: se copian al instante (no hace falta salir del campo) */
 const SYNC={"1":"ou1","X":"ouX","2":"ou2","o:goals:2.5":"ouO","u:goals:2.5":"ouU"};
 let oddsDirty=false;
