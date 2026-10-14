@@ -1047,7 +1047,14 @@ def build(template, out_path="docs/index.html"):
         falta = [t for t in UCL_TEAMS if t not in params["ucl"]["elo"]]
         note += f" Champions: Elo guardado del {STATIC_ELO_DATE}." + (" Faltan: " + ", ".join(falta) + "." if falta else "")
     log(note)
-    data = {"leagues": params, "fixtures": fixtures, "note": note, "uclh": uclh, "uclalias": ucl_alias(params, uclh), "h2h": h2h_data(params, uclh),
+    try:
+        import bajas as _bj
+        raw = json.load(open(Path(__file__).parent / "data" / "bajas.json", encoding="utf-8"))
+        bj = _bj.attach(raw, {k: v.get("teams") or [] for k, v in params.items()}, log)
+    except Exception as e:  # noqa: BLE001
+        bj = {}
+        log(f"  bajas: sin datos ({str(e)[:100]})")
+    data = {"leagues": params, "fixtures": fixtures, "note": note, "bajas": bj, "uclh": uclh, "uclalias": ucl_alias(params, uclh), "h2h": h2h_data(params, uclh),
             "generated": local.strftime("%Y-%m-%d %H:%M") + " (hora de Honduras)"}
     html = template.replace("__PARAMS__", json.dumps(data, separators=(",", ":"), ensure_ascii=False))
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
@@ -1343,6 +1350,17 @@ ul.exp b{font-weight:800}
 #apiRem{font-size:12px;margin-top:4px}
 .linkb{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;font:inherit;cursor:pointer}
 #bajas h3{margin-bottom:2px}
+.bjp{border-top:1px solid var(--line);padding:10px 0 8px;margin-top:2px} .bjp:first-of-type{border-top:0}
+.bjl{display:flex;gap:8px;align-items:flex-start;font-size:14px;line-height:1.35} .bjl>div{flex:1;min-width:0} .bji{font-size:18px;line-height:1.2}
+.bjl small{display:block;color:var(--muted);font-size:12px;margin-top:1px}
+.bjx{border:0;background:none;color:var(--muted);font-size:16px;padding:2px 6px}
+.bjc{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:7px}
+.bjc button{border:1.5px solid var(--line);background:var(--paper);border-radius:10px;padding:7px 3px;font-size:12px;font-weight:700;line-height:1.2}
+.bjc button[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:var(--sel)}
+.bjnone{color:var(--muted);font-size:14px;margin-top:6px}
+.bjadd{margin-top:10px;border:1.5px dashed var(--line);background:transparent;border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700;width:100%}
+.bjform{margin-top:8px;display:grid;gap:8px} .bjfr{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bjtac{margin-top:14px;border-top:1px solid var(--line);padding-top:10px} .bjtac summary{font-weight:700;font-size:14px;cursor:pointer}
 .bjt{font-weight:800;font-size:15px;margin-top:14px}
 .bjb{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--paper);border-radius:12px;padding:11px 12px;margin-top:8px;font-size:14px;font-weight:600;line-height:1.35}
 .bjb[aria-pressed="true"]{background:var(--sel);color:var(--on-sel);border-color:var(--sel)}
@@ -2428,7 +2446,7 @@ function fxRows(f){                           // filas del partido con las cuota
     const key=f.lg+"|"+f.h+"|"+f.a, af=apiStore[key], um=key===userMatch?userOdds:(oddsMem[key]||null);
     let odds=Object.assign({},f.odds,af&&af.odds), ml=(af&&af.ml)||f.ml||null;
     if(um){const u=mlFromOdds(um); if(u)ml=u; odds=Object.assign({},odds,um);}
-    const ba=key===userMatch?bajArgs(DATA.leagues[f.lg],ml):[1,1,0,0];
+    const ba=bajArgs(DATA.leagues[f.lg],ml,key);
     const c=compute(f.h,f.a,ba[0],ba[1],ml,ba[2],ba[3]);
     const pure=ml?compute(f.h,f.a,ba[0],ba[1],null,ba[2],ba[3]):c;
     return {key:key,odds:odds,ml:ml,hasMkt:!!ml,c:c,pure:pure,
@@ -2875,36 +2893,110 @@ function updTxt(){
   $("upd").innerHTML=(L.kind==="elo"?"Ranking Elo del "+esc(L.updated):"Datos hasta "+esc(L.updated))+"<br>Actualizado "+esc((DATA.generated||"—").slice(0,16));
 }
 function fitName(el){const n=el.textContent.length; el.style.fontSize=(n<=7?34:n<=10?29:n<=13?25:21)+"px";}
-/* ---------- 🚑 Bajas y Sanciones Clave (manual y local) ---------- */
+/* ---------- 🚑 Bajas y Sanciones Clave: lista por equipo (fuente pública + manual) conectada al modelo ---------- */
 const BJ=[["s","⭐ Baja Estrella Ofensiva (-15% goles esperados / -35 Elo)"],["m","🧠 Baja Mediocampo Clave (-8% goles esperados / +4% goles rival / -20 Elo)"],["d","🛡️ Baja Defensa Titular o Portero (+12% goles rival / -25 Elo)"]];
 let baj={h:{s:0,m:0,d:0},a:{s:0,m:0,d:0}};
 function bajReset(){baj={h:{s:0,m:0,d:0},a:{s:0,m:0,d:0}};}
-function bajAny(){return ["h","a"].some(k=>baj[k].s||baj[k].m||baj[k].d);}
-function bajArgs(L,ml){                       // [factor goles local, factor goles visitante, delta Elo local, delta Elo visitante]
-  const H=baj.h, A=baj.a;
-  const fh=(H.s?0.85:1)*(H.m?0.92:1)*(A.d?1.12:1)*(A.m?1.04:1), fa=(A.s?0.85:1)*(A.m?0.92:1)*(H.d?1.12:1)*(H.m?1.04:1);
-  const dh=-(35*H.s+20*H.m+25*H.d), da=-(35*A.s+20*A.m+25*A.d);
-  return (L.kind==="elo"&&!ml)?[1,1,dh,da]:[fh,fa,0,0];   // Champions sin cuotas: el ajuste va al Elo; en los demás casos, a los goles esperados
+const KEYBJ="scoutpicks.bajas.v1";                // por partido: bajas escritas a mano y el impacto elegido para cada jugador
+let bajStore={}, bajForm={side:"",name:"",why:"i",pos:"Delantero",det:""};
+try{const o=JSON.parse(localStorage.getItem(KEYBJ)||"{}"); if(o&&typeof o==="object"&&!Array.isArray(o))bajStore=o;}catch(e){}
+function bajSave(){
+  Object.keys(bajStore).forEach(k=>{const s=bajStore[k]; if(!s||(!(s.add&&(s.add.h.length||s.add.a.length))&&!Object.keys(s.imp||{}).length))delete bajStore[k];});
+  const ks=Object.keys(bajStore); while(ks.length>60)delete bajStore[ks.shift()];
+  try{localStorage.setItem(KEYBJ,JSON.stringify(bajStore));}catch(e){}
+}
+function bajSt(key){const s=bajStore[key]||(bajStore[key]={add:{h:[],a:[]},imp:{}}); s.add=s.add||{h:[],a:[]}; s.add.h=s.add.h||[]; s.add.a=s.add.a||[]; s.imp=s.imp||{}; return s;}
+const IMPW=[0,0.5,1], IMPN=["Suplente/Sin impacto","Titular Regular","Titular Estrella"], BORD={r:0,r2:0,y:0,s:0,i:1,d:2};
+function bajList(lgk,team,side,key){            // jugadores ausentes de un equipo: los de la fuente pública + los escritos a mano
+  const B=DATA.bajas&&DATA.bajas[lgk], has=!!(B&&B.teams&&Object.prototype.hasOwnProperty.call(B.teams,team));
+  const st=bajStore[key], auto=has?B.teams[team].map(x=>Object.assign({auto:true},x)):[], man=st&&st.add&&st.add[side]?st.add[side].map(x=>Object.assign({man:true},x)):[];
+  const list=auto.concat(man).map(x=>{const id=side+":"+x.n, v=st&&st.imp&&st.imp[id]; return Object.assign(x,{id:id,imp:v!==undefined?v:(x.man?1:0)});});
+  list.sort((x,y)=>(BORD[x.k]-BORD[y.k]));
+  return {has:has,list:list};
+}
+function bajEff(key,side){                       // {own: factor de goles propios, opp: factor de goles del rival, elo: ajuste de Elo}
+  let own=1,opp=1,elo=0;
+  const T=key===userMatch?baj[side]:null;
+  if(T){if(T.s){own*=0.85;elo-=35;} if(T.m){own*=0.92;opp*=1.04;elo-=20;} if(T.d){opp*=1.12;elo-=25;}}
+  const p=key.split("|"), team=side==="h"?p[1]:p[2];
+  bajList(p[0],team,side,key).list.forEach(x=>{
+    const w=IMPW[x.imp]*(x.k==="d"?0.5:1); if(!w)return;                 // una duda pesa la mitad
+    if(x.p==="Delantero"){own*=1-0.15*w; elo-=35*w;}
+    else if(x.p==="Defensa"||x.p==="Portero"){opp*=1+0.12*w; elo-=25*w;}
+    else{own*=1-0.08*w; opp*=1+0.04*w; elo-=20*w;}
+  });
+  return {own:Math.max(own,0.6),opp:Math.min(opp,1.3),elo:Math.max(elo,-100)};
+}
+function bajActive(key){
+  const p=key.split("|"); return ["h","a"].map(s=>bajList(p[0],s==="h"?p[1]:p[2],s,key).list.filter(x=>x.imp>0));
+}
+function bajAny(){
+  if(["h","a"].some(k=>baj[k].s||baj[k].m||baj[k].d))return true;
+  return !!userMatch&&bajActive(userMatch).some(l=>l.length);
+}
+function bajArgs(L,ml,key){                      // [factor goles local, factor goles visitante, delta Elo local, delta Elo visitante]
+  key=key||userMatch; const H=bajEff(key,"h"), A=bajEff(key,"a");
+  return (L.kind==="elo"&&!ml)?[1,1,H.elo,A.elo]:[H.own*A.opp,A.own*H.opp,0,0];   // Champions sin cuotas: el ajuste va al Elo; en los demás casos, a los goles esperados
+}
+const BICON={i:"🏥",d:"🏥",r:"🟥",r2:"🟥",y:"🟨",s:"🟥"};
+function bajDate(r,md){if(!r)return ""; const p=r.split("-"), t=(+p[2])+" "+MONTHS[+p[1]-1]; return md&&r<=md?"regreso previsto "+t+": podría estar disponible":"vuelve ~"+t;}
+function bajPlayer(x,md){
+  const stats=[x.m!=null?x.m+" PJ":"",x.gl?x.gl+" G":"",x.as?x.as+" A":"",bajDate(x.r,md),x.k==="d"?"duda: pesa la mitad":"",x.man?"escrita a mano":""].filter(Boolean).join(" · ");
+  return `<div class="bjp"><div class="bjl"><span class="bji">${BICON[x.k]||"🏥"}</span><div><b>${esc(x.n)}</b>${x.p?" · "+esc(x.p):""} · ${esc(x.w)}${stats?`<small>${esc(stats)}</small>`:""}</div>${x.man?`<button class="bjx" type="button" data-bdel="${esc(x.id)}" aria-label="Quitar a ${esc(x.n)}">✕</button>`:""}</div>
+    <div class="bjc" role="group" aria-label="Impacto de ${esc(x.n)}">${[2,1,0].map(v=>`<button type="button" data-bi="${esc(x.id)}" data-v="${v}" aria-pressed="${x.imp===v}">${v===2?"⭐ ":""}${IMPN[v]}</button>`).join("")}</div></div>`;
+}
+function bajTeamHtml(side,team,key,lgk,md){
+  const bl=bajList(lgk,team,side,key), open=bajForm.side===side;
+  let html=`<div class="bjt">Bajas ${esc(team)} <span class="sub">(${side==="h"?"local":"visitante"})</span></div>`;
+  html+=bl.list.length?bl.list.map(x=>bajPlayer(x,md)).join(""):`<div class="bjnone">${bl.has?"Sin bajas confirmadas":"Sin datos automáticos de este equipo. Agrégalas a mano."}</div>`;
+  html+=`<button class="bjadd" type="button" data-bopen="${side}" aria-expanded="${open}">+ Agregar baja manual</button>`;
+  if(open)html+=`<div class="bjform"><input class="in" data-bf="name" placeholder="Nombre del jugador" maxlength="40" value="${esc(bajForm.name)}" autocomplete="off">
+    <div class="bjfr"><select class="in" data-bf="why" aria-label="Motivo"><option value="i"${bajForm.why==="i"?" selected":""}>Lesión</option><option value="r"${bajForm.why==="r"?" selected":""}>Roja</option><option value="y"${bajForm.why==="y"?" selected":""}>Amarillas</option></select>
+    <select class="in" data-bf="pos" aria-label="Rol">${["Portero","Defensa","Mediocampista","Delantero"].map(p=>`<option${bajForm.pos===p?" selected":""}>${p}</option>`).join("")}</select></div>
+    <input class="in" data-bf="det" placeholder="Detalle, opcional (ej. rodilla)" maxlength="40" value="${esc(bajForm.det)}" autocomplete="off">
+    <button class="bjb" type="button" data-badd="${side}" style="text-align:center">Agregar a ${esc(team)}</button></div>`;
+  return html;
 }
 function renderBajas(h,a,base,fin){
   const L=DATA.leagues[league], box=$("bajas");
   if(fin){box.innerHTML="";box.hidden=true;return;}
   box.hidden=false;
-  const side=(k,t)=>`<div class="bjt">${esc(t)} <span class="sub">(${k==="h"?"local":"visitante"})</span></div>`+BJ.map(([c,lbl])=>`<button class="bjb" type="button" data-k="${k}" data-c="${c}" aria-pressed="${baj[k][c]?"true":"false"}">${lbl}</button>`).join("");
+  const key=league+"|"+h+"|"+a, B=DATA.bajas&&DATA.bajas[league], fxm=(DATA.fixtures||[]).find(f=>f.lg===league&&f.h===h&&f.a===a&&!f.score), md=fxm?fxm.date.slice(0,10):"";
+  const tog=(k,t)=>BJ.map(([c,lbl])=>`<button class="bjb" type="button" data-k="${k}" data-c="${c}" aria-pressed="${baj[k][c]?"true":"false"}">${lbl}</button>`).join("");
+  let src;
+  if(B&&B.t){const age=(Date.now()-Date.parse(B.t))/36e5, d=new Date(Date.parse(B.t)-6*36e5), fmt=d.getUTCDate()+" "+MONTHS[d.getUTCMonth()]+", "+String(d.getUTCHours()).padStart(2,"0")+":"+String(d.getUTCMinutes()).padStart(2,"0");
+    src=`<div class="sub">Fuente: Sportsgambler (página pública), actualizada el ${fmt} (hora de Honduras).${age>72?` <b>Tiene más de 3 días: puede estar desactualizada.</b>`:""}</div>`;}
+  else src=`<div class="sub">Esta liga no tiene lista automática de bajas. Usa "+ Agregar baja manual" o los botones tácticos.</div>`;
   let sum="";
   if(bajAny()){
-    const [pH,pD,pA]=cur.p, [bH,bD,bA]=base.p, d=(x,y)=>`${pct(y)} → <b>${pct(x)}</b>`;
+    const [pH,pD,pA]=cur.p, [bH,bD,bA]=base.p, d=(x,y)=>`${pct(y)} → <b>${pct(x)}</b>`, act=bajActive(key);
+    const names=act.map((l,i)=>l.map(x=>`${esc(x.n)} (${IMPN[x.imp]})`).join(", ")).map((t,i)=>t?`${esc(i?a:h)}: ${t}`:"").filter(Boolean);
     sum=`<div class="bjsum"><div>Gana ${esc(h)}: <span class="bf">${d(pH,bH)}</span></div><div>Empate: <span class="bf">${d(pD,bD)}</span></div><div>Gana ${esc(a)}: <span class="bf">${d(pA,bA)}</span></div>
-      <div>Goles esperados: ${esc(h)} <span class="bf">${base.lh.toFixed(2)} → <b>${cur.lh.toFixed(2)}</b></span> · ${esc(a)} <span class="bf">${base.la.toFixed(2)} → <b>${cur.la.toFixed(2)}</b></span></div></div>`
+      <div>Goles esperados: ${esc(h)} <span class="bf">${base.lh.toFixed(2)} → <b>${cur.lh.toFixed(2)}</b></span> · ${esc(a)} <span class="bf">${base.la.toFixed(2)} → <b>${cur.la.toFixed(2)}</b></span></div>${names.length?`<div class="sub" style="margin-top:6px">Contando: ${names.join(" · ")}</div>`:""}</div>`
       +(L.kind==="elo"&&!cur.fromMkt?`<div class="sub" style="margin-top:8px">En la Champions sin cuotas el ajuste mueve el Elo de cada club (y de ahí los goles esperados).</div>`:"")
-      +(cur.fromMkt?`<div class="flag" style="margin-top:8px">Las probabilidades salen de cuotas del mercado, que normalmente ya incluyen las bajas conocidas. Si activas aquí una baja que la casa ya conoce, se cuenta dos veces.</div>`:"");
+      +(cur.fromMkt?`<div class="flag" style="margin-top:8px">Las probabilidades salen de cuotas del mercado, que normalmente ya incluyen las bajas conocidas. Si marcas aquí una baja que la casa ya conoce, se cuenta dos veces.</div>`:"");
   }
-  box.innerHTML=`<h3>🚑 Bajas y Sanciones Clave</h3><div class="sub">Actívalas a mano si falta alguien importante. Se suman si activas varias y recalculan al instante probabilidades, cuotas justas, valor esperado y stake. Son porcentajes fijos, no están validados con partidos pasados.</div>`+side("h",h)+side("a",a)+sum;
+  box.innerHTML=`<h3>🚑 Bajas y Sanciones Clave</h3><div class="sub">Lesionados y sancionados de cada equipo. Nadie afecta al modelo hasta que elijas su impacto: <b>Titular Estrella</b> pesa completo, <b>Titular Regular</b> la mitad y <b>Suplente/Sin impacto</b> nada. Recalcula al instante probabilidades, cuotas justas, valor esperado y stake. Los porcentajes son fijos y no están validados con partidos pasados.</div>${src}`
+    +bajTeamHtml("h",h,key,league,md)+bajTeamHtml("a",a,key,league,md)
+    +`<details class="bjtac"><summary>Botones tácticos (respaldo rápido)</summary><div class="bjt">${esc(h)} <span class="sub">(local)</span></div>${tog("h")}<div class="bjt">${esc(a)} <span class="sub">(visitante)</span></div>${tog("a")}</details>`+sum;
 }
 $("bajas").addEventListener("click",ev=>{
-  const b=ev.target.closest("button[data-k]"); if(!b)return;
-  baj[b.dataset.k][b.dataset.c]^=1; render();
+  const t=ev.target.closest("button"); if(!t)return;
+  const h=$("home").value,a=$("away").value,key=league+"|"+h+"|"+a;
+  if(t.dataset.k){baj[t.dataset.k][t.dataset.c]^=1; render(); return;}
+  if(t.dataset.bi){bajSt(key).imp[t.dataset.bi]=+t.dataset.v; bajSave(); render(); return;}
+  if(t.dataset.bdel){const id=t.dataset.bdel, s=bajSt(key), side=id[0]; s.add[side]=s.add[side].filter(x=>side+":"+x.n!==id); delete s.imp[id]; bajSave(); render(); return;}
+  if(t.dataset.bopen){bajForm.side=bajForm.side===t.dataset.bopen?"":t.dataset.bopen; render(); return;}
+  if(t.dataset.badd){
+    const side=t.dataset.badd, name=bajForm.name.trim().replace(/\s+/g," ");
+    if(!name){const i=$("bajas").querySelector('input[data-bf="name"]'); if(i)i.focus(); return;}
+    const det=bajForm.det.trim(), why=bajForm.why, w=why==="r"?"Suspendido por tarjeta roja":why==="y"?"Suspendido por acumulación de amarillas":"Lesión"+(det?" de "+det:"");
+    const s=bajSt(key); s.add[side]=s.add[side].filter(x=>x.n!==name); s.add[side].push({n:name,p:bajForm.pos,k:why,w:why==="i"&&!det?"Lesión":w});
+    s.imp[side+":"+name]=1; bajForm.name=""; bajForm.det=""; bajForm.side=""; bajSave(); render();
+  }
 });
+$("bajas").addEventListener("input",ev=>{const f=ev.target.dataset&&ev.target.dataset.bf; if(f)bajForm[f]=ev.target.value;});
+$("bajas").addEventListener("change",ev=>{const f=ev.target.dataset&&ev.target.dataset.bf; if(f)bajForm[f]=ev.target.value;});
 
 function render(){
   const h=$("home").value,a=$("away").value,L=DATA.leagues[league];
@@ -2917,7 +3009,7 @@ function render(){
   const mk0=league+"|"+h+"|"+a; if(mk0!==userMatch){userOdds=Object.assign({},oddsMem[mk0]||{});userMatch=mk0;bajReset();}
   const uml=mlFromOdds(userOdds);
   const ml=uml||(fx&&fx.ml?fx.ml:null);
-  const [fh,fa,dh,da]=bajArgs(L,ml);
+  const [fh,fa,dh,da]=bajArgs(L,ml,mk0);
   cur=compute(h,a,fh,fa,ml,dh,da); cur.src=uml?"user":(ml?"fx":null);
   $("hMeta").textContent=L.name+(fin?" · Final "+fx.score[0]+"–"+fx.score[1]:fx?" · "+dtxt(fx.date):"");
   $("hn").textContent=h; $("an").textContent=a; fitName($("hn")); fitName($("an"));

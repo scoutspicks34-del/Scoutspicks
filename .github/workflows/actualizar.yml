@@ -17,6 +17,9 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install pandas numpy scipy requests
+      - name: Bajas (lesionados y sancionados)
+        continue-on-error: true
+        run: python bajas.py
       - run: python build.py
         env:
           FOOTBALL_DATA_ORG_KEY: ${{ secrets.FOOTBALL_DATA_ORG_KEY }}
@@ -24,6 +27,6 @@ jobs:
         run: |
           git config user.name "picks-fresh-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add docs data/espn_*.csv
+          git add docs data/espn_*.csv data/bajas.json
           git commit -m "Actualizar datos" || echo "Sin cambios"
           git push
