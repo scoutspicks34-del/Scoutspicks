@@ -49,6 +49,10 @@ Desde el navegador: la clave se pega en la página y vive solo en `localStorage`
   - Las cuotas que escribes (en el partido o en Destacados) se guardan por partido en `localStorage` (`scoutpicks.myodds.v1`) para que el escaneo las vea.
 - Destacados → "Mi parlay": constructor manual (se guarda en `localStorage`).
 
+## Picks y parlays por liga y por partido
+- Partidos → panel desplegable "🏆 Picks y Parlays de la Jornada: [liga]" encima de la lista: el mismo motor de Destacados (Pick Solitario, Combinada, Parlay Soñador), pero solo con los partidos de la liga y el día elegidos que aún no empiezan. Se recalcula al cambiar de día o de liga. Destacados no cambia.
+- Dentro de cada partido (Resumen): tarjeta "💡 Sugerencias del Modelo para este Partido" con Pick Solitario (1X2, doble oportunidad, goles o ambos anotan), Fijo para Parlay (75% o más) y "🧩 Crear apuesta (mismo partido)": combinación lógica de 2 mercados (por ejemplo doble oportunidad + más de 1.5) con la probabilidad conjunta sacada de la matriz de marcadores de Poisson, cuota justa y casilla para la cuota de la casa (EV y stake). Se recalcula con las cuotas y las bajas activadas.
+
 ## Bajas y Sanciones Clave (manual y local)
 Reemplaza el panel de lesionados y el ajuste de −7%. Tres botones por equipo (estrella ofensiva −15% goles propios; mediocampo −8% propios y +4% rival; defensa/portero +12% rival). Se acumulan. En ligas con Poisson mueven los goles esperados; en la Champions sin cuotas mueven el Elo (−35, −20, −25). Todo se calcula en el navegador, sin ninguna fuente externa. No están validados con partidos pasados.
 No hay conexión con API-Football: se eliminó el código, la clave del workflow y el campo de lesionados.
