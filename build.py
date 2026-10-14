@@ -1450,6 +1450,31 @@ ul.exp b{font-weight:800}
 #apiSt{margin-top:8px;line-height:1.45} #apiSt.err{color:var(--bad)} #apiSt.ok b{color:var(--good)}
 #apiRem{font-size:12px;margin-top:4px}
 .linkb{background:none;border:0;padding:0;color:var(--ink);text-decoration:underline;font:inherit;cursor:pointer}
+.psg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:14px;padding:4px;margin:12px 0}
+.psg button{border:0;background:transparent;border-radius:10px;padding:10px 4px;font-weight:700;font-size:14px}
+.psg button[aria-pressed="true"]{background:var(--sel);color:var(--on-sel)}
+.picks h3{margin-bottom:2px}
+.pk{border:1.5px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:var(--soft)}
+.pk.val{border-color:var(--good)}
+.pkh{font-size:13px;font-weight:800;letter-spacing:.02em;color:var(--muted)}
+.pkm{font:800 23px/1.15 var(--disp);font-stretch:80%;margin:5px 0 3px}
+.pkn{font-size:14px;line-height:1.45}
+.pkn .ev{display:inline;font-size:inherit}
+.addb{margin-top:10px;width:100%;border:1.5px solid var(--ink);background:transparent;border-radius:10px;padding:9px 12px;font-weight:700;font-size:14px}
+.addb.on{background:var(--sel);color:var(--on-sel);border-color:var(--sel)}
+.parl{margin-top:12px}
+.parl h3{font-size:17px;margin:0 0 2px}
+.pleg{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:9px 0;border-top:1px solid var(--line);align-items:center}
+.pleg:first-of-type{border-top:0}
+.pleg .pm{font-size:12px;color:var(--muted)} .pleg .pl{font-weight:700;font-size:15px}
+.pleg .pp{font:800 20px/1 var(--disp);font-stretch:80%;text-align:right}
+.pleg .rm{background:none;border:0;color:var(--muted);font-size:13px;text-decoration:underline;padding:0;text-align:right}
+.pst{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.pst div{background:var(--soft);border-radius:10px;padding:9px 10px} .pst small{display:block;font-size:12px;color:var(--muted)} .pst b{font:800 20px/1.1 var(--disp);font-stretch:80%}
+.pcalc{display:grid;grid-template-columns:1fr 100px 70px;gap:8px;align-items:center;margin-top:10px}
+.pcalc input{border:1.5px solid var(--line);border-radius:10px;padding:9px;font-size:16px;text-align:center;width:100%;background:var(--paper)}
+.pcalc .mf{font-size:13px;color:var(--muted)}
+.parl .row2{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 .stk{margin-top:7px;font-size:14px;line-height:1.35}
 .stk b{font-weight:800}
 .stk.yes b{color:var(--good)} .stk.no{color:var(--muted)}
@@ -1528,9 +1553,18 @@ ul.exp b{font-weight:800}
     <!-- DESTACADOS -->
     <section id="vFeat" aria-label="Picks destacados" hidden>
       <div class="vh"><h2>Picks destacados</h2></div>
+      <div class="psg" role="group" aria-label="Sección"><button type="button" data-ft="trend" aria-pressed="true">Tendencias</button><button type="button" data-ft="parl" aria-pressed="false">Armador de Parlays <span id="parlN"></span></button></div>
+      <div id="fParl" hidden>
+        <div class="sub" id="parlSub"></div>
+        <div id="parlAuto"></div>
+        <div class="box" id="parlMine"></div>
+        <p class="foot">Una combinada solo gana si aciertan todas sus selecciones, y cada selección suma el margen de la casa. Las probabilidades se multiplican como si los partidos fueran independientes, por eso el armador usa una sola selección por partido. Son cálculos del modelo, no garantías.</p>
+      </div>
+      <div id="fTrend">
       <div class="sub">Mercados donde los dos equipos cumplieron en 7 o más de sus últimos 10 partidos. Cambia la liga o el día arriba.</div>
       <div id="feat"></div>
       <div class="callout"><b>Una racha no es una probabilidad.</b> En 4.725 partidos pasados, cuando los dos equipos traían 8 o más de 10 en "más de 2.5 goles", se cumplió 69% de las veces, no 80–90%, y las casas ya daban 65%. En córners (más de 9.5) fue 68% contra 52% de base, y en tarjetas (más de 3.5) 74% contra 61%.</div>
+      </div>
     </section>
 
     <!-- BITÁCORA -->
@@ -1613,6 +1647,7 @@ ul.exp b{font-weight:800}
           <div class="tiles" id="tiles"></div>
         </div>
         <div class="box" id="expect" hidden></div>
+        <div class="box picks" id="picks" hidden></div>
         <div class="box">
           <h3>Cuotas de tu casa</h3>
           <div class="sub">Escribe las cuotas que te da tu casa de apuestas y recalculamos las probabilidades quitándoles el margen de la casa.</div>
@@ -2299,6 +2334,7 @@ function renderFeat(){
       <span class="tl"><span class="who">${esc(f.h)}</span>${sqHtml(it.x)}<b>${it.x.k}/${it.x.n}</b></span>
       <span class="tl"><span class="who">${esc(f.a)}</span>${sqHtml(it.y)}<b>${it.y.k}/${it.y.n}</b></span></button>`;}).join("")
     :`<div class="empty">Ningún partido de este día tiene una racha de 7 de 10 o más en los dos equipos. Prueba con otro día.</div>`;
+  if(typeof featTab!=="undefined"&&featTab==="parl"&&view==="feat")renderParl();
 }
 
 /* Calculadora de stake: Kelly fraccional. f* = (p·cuota − 1) / (cuota − 1); stake = bankroll × fracción × f* */
@@ -2313,7 +2349,7 @@ function stakeHtml(p,v,push){
   if(!(ev>1e-12))return {cls:"stk no",html:"Stake sugerido: <b>L 0 (No apostar)</b>"};
   const f=(ev/(v-1))*(bank.k/100);                       // fracción del bankroll
   const pc=(f*100).toFixed(f<0.01?2:1)+"% del bankroll";
-  if(!(bank.v>0))return {cls:"stk yes",html:`Stake sugerido: <b>${pc}</b><small>Escribe tu bankroll arriba para verlo en lempiras.</small>`};
+  if(!(bank.v>0))return {cls:"stk yes",html:`Stake sugerido: <b>${pc}</b><small>Escribe tu bankroll (en Apostar o Props) para verlo en lempiras.</small>`};
   const m=bank.v*f;
   return {cls:"stk yes",html:`Stake sugerido: <b>${m<0.5?"menos de L 1":lps(m)}</b><small>${pc} · Kelly ${bank.k}%</small>`};
 }
@@ -2326,7 +2362,7 @@ function syncBankUI(src){
   document.querySelectorAll(".bank button[data-k]").forEach(x=>x.setAttribute("aria-pressed",String(+x.dataset.k===bank.k)));
 }
 function updStakes(){
-  bankMsg();
+  bankMsg(); schedPicks();
   if(cur)cur.rows.forEach((r,i)=>{const el=$("o"+i); if(el&&parseFloat(el.value.replace(",","."))>1)onOdds(i);});
   propCalc();
 }
@@ -2340,6 +2376,7 @@ document.addEventListener("click",ev=>{
 });
 syncBankUI(); bankMsg();
 function onOdds(i){
+  schedPicks();
   const r=cur.rows[i], v=parseFloat($("o"+i).value.replace(",","."));
   const e=$("e"+i), b=$("b"+i), f=$("f"+i);
   const sk=$("s"+i);
@@ -2355,6 +2392,185 @@ function onOdds(i){
   if(sk){const t=stakeHtml(r.p,v); sk.className=t.cls; sk.innerHTML=t.html;}
 }
 
+
+/* ---------- Picks sugeridos y armador de parlays ---------- */
+const KEYP="scoutpicks.parlay.v1";
+let parlay=[], parlOdds={}, featTab="trend", lastPicks=null, picksTimer=null;
+try{const o=JSON.parse(localStorage.getItem(KEYP)||"[]"); if(Array.isArray(o))parlay=o.filter(x=>x&&x.id&&x.p>0&&x.p<1);}catch(e){}
+function saveParlay(){try{localStorage.setItem(KEYP,JSON.stringify(parlay));}catch(e){}}
+function flagFor(r,v){                       // mismas alertas que muestra la fila en Apostar
+  if(!(v>1))return null; const ev=r.p*v-1, gap=r.p-1/v;
+  if(ev>0&&gap>=0.08)return "big";
+  if(r.fav&&r.p<0.5&&ev>0)return "fav";
+  return null;
+}
+const PK_GOALS=new Set(["o:goals:1.5","u:goals:1.5","o:goals:2.5","u:goals:2.5","o:goals:3.5","u:goals:3.5"]);
+function pkEligible(r){return r.sec==="Resultado"||PK_GOALS.has(r.key);}     // 1X2, doble oportunidad y goles 1.5 / 2.5 / 3.5
+function pkCands(rows,oddsOf){
+  return rows.filter(pkEligible).map(r=>{const v=oddsOf(r), ok=v>1;
+    return {r:r,p:r.p,label:r.label,fair:1/r.p,v:ok?v:null,ev:ok?r.p*v-1:null,flag:ok?flagFor(r,v):null,id:r.key||(r.sec+"|"+r.label)};});
+}
+function pkSuggest(cands){
+  const val=cands.filter(c=>c.ev!==null&&c.ev>0&&c.p>=0.38&&c.flag!=="big").sort((a,b)=>b.ev-a.ev)[0];
+  let main=null;
+  if(val)main={kind:"val",c:val};
+  else{const pr=cands.filter(c=>c.p>=0.60&&c.p<=0.80&&c.fair>=1.35&&c.fair<=1.85).sort((a,b)=>b.p-a.p)[0]; if(pr)main={kind:"prob",c:pr};}
+  const band=cands.filter(c=>c.p>=0.75&&c.p<=0.92), pref=band.filter(c=>/^Más de 1\.5 goles$|^Doble oportunidad/.test(c.label));
+  const fijo=(pref.length?pref:band).sort((a,b)=>b.p-a.p)[0]||null;
+  return {main:main,fijo:fijo,anyOdds:cands.some(c=>c.v)};
+}
+function legOf(lg,match,c){return {id:lg+"|"+match+"|"+c.id,lg:lg,match:match,label:c.label,p:c.p,odds:c.v||null};}
+function inParlay(id){return parlay.some(x=>x.id===id);}
+function addLeg(leg){
+  const i=parlay.findIndex(x=>x.lg===leg.lg&&x.match===leg.match);     // una sola selección por partido
+  const replaced=i>=0?parlay[i]:null;
+  if(i>=0)parlay.splice(i,1);
+  parlay.push(leg); saveParlay(); parlN(); return replaced;
+}
+function parlN(){$("parlN").textContent=parlay.length?"("+parlay.length+")":"";}
+function pkBlock(c,kind,idx){
+  const odds=c.v?`Cuota cargada <b>${f2(c.v)}</b> · valor esperado <span class="ev ${c.ev>0?"pos":"neg"}">${c.ev>0?"+":""}${(c.ev*100).toFixed(1)}%</span>`:"";
+  return {odds:odds};
+}
+function renderPicks(){
+  const box=$("picks"); if(!cur||$("home").value===$("away").value){box.hidden=true;return;}
+  const h=$("home").value,a=$("away").value, fxs=(DATA.fixtures||[]).filter(f=>f.lg===league&&f.h===h&&f.a===a);
+  if(fxs.length&&fxs.every(f=>f.score)){box.hidden=true;return;}
+  const oddsOf=r=>{const i=cur.rows.indexOf(r), el=i>=0?$("o"+i):null; return el?parseFloat(el.value.replace(",",".")):NaN;};
+  const cands=pkCands(cur.rows,oddsOf), sg=pkSuggest(cands), match=h+" vs "+a;
+  lastPicks={main:sg.main&&legOf(league,match,sg.main.c),fijo:sg.fijo&&legOf(league,match,sg.fijo)};
+  let html=`<h3>🎯 Picks sugeridos</h3><div class="sub">Se eligen entre resultado, doble oportunidad y más/menos de 1.5, 2.5 y 3.5 goles.</div>`;
+  const btn=(k,leg)=>`<button class="addb${inParlay(leg.id)?" on":""}" type="button" data-pk="${k}">${inParlay(leg.id)?"✓ En tu parlay (quitar)":"+ Agregar a mi Parlay"}</button>`;
+  if(sg.main){
+    const c=sg.main.c, isV=sg.main.kind==="val", st=isV?stakeHtml(c.p,c.v):null;
+    html+=`<div class="pk${isV?" val":""}"><div class="pkh">🎯 PICK PRINCIPAL · ${isV?"PICK DE VALOR":"PICK DE PROBABILIDAD"}</div><div class="pkm">${esc(c.label)}</div>
+      <div class="pkn">Probabilidad <b>${pct(c.p)}</b> · cuota justa <b>${f2(c.fair)}</b>${c.v?`<br>Cuota cargada <b>${f2(c.v)}</b> · valor esperado <span class="ev ${c.ev>0?"pos":"neg"}">${c.ev>0?"+":""}${(c.ev*100).toFixed(1)}%</span>`:`<br>Busca una cuota de ${f2(c.fair)} o más; si tu casa paga menos, no vale la pena.`}</div>
+      ${isV?`<div class="${st.cls}">${st.html}</div>${c.flag==="fav"?`<div class="flag" style="margin-top:6px">Ojo: el modelo subestima favoritos.</div>`:""}`:`<div class="sub" style="margin-top:6px">${sg.anyOdds?"Con las cuotas cargadas ningún mercado tiene valor esperado positivo (sin alertas), así que va el de mejor equilibrio entre probabilidad (60–74%) y cuota justa (1.35–1.85).":"No hay cuotas cargadas: va el de mejor equilibrio entre probabilidad (60–74%) y cuota justa (1.35–1.85)."}</div>`}
+      ${btn("main",lastPicks.main)}</div>`;
+  }else html+=`<div class="pk"><div class="pkh">🎯 PICK PRINCIPAL</div><div class="pkn" style="margin-top:6px">Ningún mercado cumple las condiciones en este partido (valor positivo sin alertas, o probabilidad de 60–74% con cuota justa de 1.35 a 1.85). Mejor no forzar uno.</div></div>`;
+  if(sg.fijo){
+    const c=sg.fijo;
+    html+=`<div class="pk"><div class="pkh">🔗 FIJO PARA PARLAY · IDEAL PARA COMBINAR</div><div class="pkm">${esc(c.label)}</div>
+      <div class="pkn">Probabilidad <b>${pct(c.p)}</b> · cuota justa <b>${f2(c.fair)}</b>${c.v?`<br>Cuota cargada <b>${f2(c.v)}</b> · valor esperado <span class="ev ${c.ev>0?"pos":"neg"}">${c.ev>0?"+":""}${(c.ev*100).toFixed(1)}%</span>`:""}</div>
+      <div class="sub" style="margin-top:6px">Es el mercado más seguro del partido, pero paga poco. Sirve para sumar a una combinada, no para jugarlo solo.</div>
+      ${btn("fijo",lastPicks.fijo)}</div>`;
+  }else html+=`<div class="pk"><div class="pkh">🔗 FIJO PARA PARLAY</div><div class="pkn" style="margin-top:6px">No hay un mercado con probabilidad de 75% a 92% en este partido.</div></div>`;
+  html+=`<div class="sub" style="margin-top:10px">Sugerencias del modelo, no garantías. En pruebas con partidos pasados el modelo no superó a las casas de apuestas.</div>`;
+  box.innerHTML=html; box.hidden=false;
+}
+function schedPicks(){if(picksTimer)return; picksTimer=setTimeout(()=>{picksTimer=null; try{renderPicks();}catch(e){}},0);}
+$("picks").addEventListener("click",ev=>{
+  const b=ev.target.closest("button[data-pk]"); if(!b||!lastPicks)return;
+  const leg=lastPicks[b.dataset.pk]; if(!leg)return;
+  if(inParlay(leg.id)){parlay=parlay.filter(x=>x.id!==leg.id); saveParlay(); parlN();}
+  else addLeg(leg);
+  renderPicks(); if(featTab==="parl")renderParl();
+});
+
+/* --- escaneo de los partidos del día (todas las ligas) --- */
+function parlayDay(){
+  if(day)return day;
+  const up=(DATA.fixtures||[]).filter(f=>!f.score).map(f=>f.date.slice(0,10)).sort(); return up[0]||"";
+}
+function legsFor(f){                          // mercados de un partido con las mismas cuotas que usa la pantalla del partido
+  const saved=league; league=f.lg;
+  try{
+    const key=f.lg+"|"+f.h+"|"+f.a, af=apiStore[key];
+    let odds=Object.assign({},f.odds,af&&af.odds), ml=(af&&af.ml)||f.ml||null;
+    if(key===userMatch){const u=mlFromOdds(userOdds); if(u)ml=u; odds=Object.assign({},odds,userOdds);}
+    const c=compute(f.h,f.a,1,1,ml);
+    return pkCands(c.rows,r=>{const v=odds[rowKey(r)]!==undefined?odds[rowKey(r)]:(r.key?odds[r.key]:undefined); return v>1?v:NaN;});
+  }catch(e){return [];}
+  finally{league=saved;}
+}
+function scanDay(){
+  const d=parlayDay(), now=Date.now(), out=[];
+  (DATA.fixtures||[]).forEach(f=>{
+    if(f.score||f.date.slice(0,10)!==d||Date.parse(f.date+":00-06:00")<now)return;
+    const match=f.h+" vs "+f.a;
+    legsFor(f).forEach(c=>out.push(Object.assign({fx:f,match:match},c,{leg:legOf(f.lg,match,c)})));
+  });
+  return {day:d,legs:out};
+}
+function buildParlays(legs){
+  const byFx=(fn,score)=>{const m=new Map(); legs.filter(fn).forEach(c=>{const b=m.get(c.match); if(!b||score(c)>score(b))m.set(c.match,c);}); return [...m.values()];};
+  // 🛡️ Seguro: las 2–3 selecciones de mayor probabilidad (≥78%, tope 92% para no usar cuotas regaladas), una por partido
+  const safe=byFx(c=>c.p>=0.78&&c.p<=0.92,c=>c.p).sort((a,b)=>b.p-a.p).slice(0,3);
+  // ⚖️ Equilibrado: 2 selecciones de ≥62% cuya cuota justa combinada quede entre 2.00 y 3.00
+  const usedSafe=new Set(safe.map(c=>c.match));
+  const pairs=(pool)=>{let best=null,near=null; for(let i=0;i<pool.length;i++)for(let j=i+1;j<pool.length;j++){
+      if(pool[i].match===pool[j].match)continue; const pr=pool[i].p*pool[j].p;
+      if(pr>=1/3&&pr<=0.5&&(!best||pr>best.pr))best={a:pool[i],b:pool[j],pr:pr};
+      const dd=Math.abs(1/pr-2.5); if(!near||dd<near.dd)near={a:pool[i],b:pool[j],pr:pr,dd:dd};}
+    return best||near;};
+  const pool=legs.filter(c=>c.p>=0.62&&c.p<=0.92);
+  let bal=pairs(pool.filter(c=>!usedSafe.has(c.match)))||pairs(pool);
+  // 💎 Valor: 2–3 selecciones con valor esperado positivo y sin alerta de "probable error del modelo", una por partido
+  const val=byFx(c=>c.ev!==null&&c.ev>0&&c.p>=0.38&&c.flag!=="big",c=>c.ev).sort((a,b)=>b.ev-a.ev).slice(0,3);
+  return {safe:safe.length>=2?safe:null,safeN:safe.length,bal:bal,val:val.length>=2?val:null,valN:val.length,
+          nLegs:legs.length,nOdds:legs.filter(c=>c.v).length};
+}
+function parlCalcHtml(id,legs){
+  const pr=legs.reduce((s,x)=>s*x.p,1), fair=1/pr, prod=legs.every(x=>x.odds>1)?legs.reduce((s,x)=>s*x.odds,1):null;
+  const typed=parseFloat(String(parlOdds[id]||"").replace(",","."));
+  return `<div class="pst"><div><small>Probabilidad real del parlay</small><b>${(pr*100).toFixed(1)}%</b></div><div><small>Cuota justa combinada</small><b>${f2(fair)}</b></div></div>
+    <div class="pcalc"><span class="mf">Cuota que paga la casa por el parlay${prod?` <small>(multiplicando las cuotas cargadas: ${f2(prod)})</small>`:""}</span><input inputmode="decimal" data-pid="${id}" placeholder="${prod?f2(prod):"Cuota"}" value="${typed>1?String(parlOdds[id]):""}" aria-label="Cuota total del parlay"><span class="ev" id="pev_${id}"></span></div>
+    <div id="pst_${id}"></div>`;
+}
+function parlUpdate(id,legs){
+  const pr=legs.reduce((s,x)=>s*x.p,1), prod=legs.every(x=>x.odds>1)?legs.reduce((s,x)=>s*x.odds,1):null;
+  const typed=parseFloat(String(parlOdds[id]||"").replace(",",".")), v=typed>1?typed:(prod||0);
+  const e=$("pev_"+id), s=$("pst_"+id); if(!e||!s)return;
+  if(!(v>1)){e.textContent="";e.className="ev";s.innerHTML=`<div class="sub" style="margin-top:6px">Escribe la cuota total que te da tu casa para ver si el parlay tiene valor.</div>`;return;}
+  const ev=pr*v-1; e.className="ev "+(ev>0?"pos":"neg"); e.textContent=(ev>0?"+":"")+(ev*100).toFixed(1)+"%";
+  const st=stakeHtml(pr,v); s.innerHTML=`<div class="${st.cls}">${st.html}</div>${typed>1||!prod?"":`<div class="sub">Cuota calculada con las cuotas de cada selección; las casas suelen pagar menos en una combinada. Escribe la real.</div>`}`;
+}
+function parlCard(id,title,sub,legs,extra){
+  return `<div class="box parl" data-parl="${id}"><h3>${title}</h3><div class="sub">${sub}</div>
+    <div style="margin-top:8px">${legs.map(x=>`<div class="pleg"><div><div class="pm">${esc(x.lg==="ucl"?"Champions":(DATA.leagues[x.lg]||{name:x.lg}).name)} · ${esc(x.match)}</div><div class="pl">${esc(x.label)}${x.odds>1?` <small class="pm">· cuota ${f2(x.odds)}</small>`:""}</div></div><div class="pp">${pct(x.p)}${extra&&extra.rm?`<br><button class="rm" type="button" data-rm="${esc(x.id)}">quitar</button>`:""}</div></div>`).join("")}</div>
+    ${parlCalcHtml(id,legs)}${extra&&extra.foot||""}</div>`;
+}
+let parlSets={};
+function renderParl(){
+  const sc=scanDay(), P=buildParlays(sc.legs); parlSets={};
+  const dd=sc.day?dtxt(sc.day+"T12:00").slice(0,-7):"—";
+  $("parlSub").innerHTML=sc.legs.length?`Se escanean los partidos de <b>todas las ligas</b> del ${esc(dd)} que aún no empiezan (${new Set(sc.legs.map(c=>c.match)).size} partidos). Cambia el día arriba. ${sc.legs.some(c=>c.v)?"Hay cuotas cargadas en algunos partidos.":"No hay cuotas cargadas: el parlay de valor necesita cuotas (cárgalas en Apostar con el botón de The Odds API, o escríbelas)."}`:`No hay partidos próximos ese día. Cambia el día arriba.`;
+  const use=(id,legs)=>{parlSets[id]=legs; return `<div class="row2"><button class="mini" type="button" data-use="${id}">Usar en mi parlay</button></div>`;};
+  const mk=(id,title,sub,legs,miss)=>legs?parlCard(id,title,sub,legs.map(c=>c.leg),{foot:use(id,legs.map(c=>c.leg))}):`<div class="box parl"><h3>${title}</h3><div class="sub">${miss}</div></div>`;
+  const balLegs=P.bal?[P.bal.a,P.bal.b]:null, balFair=P.bal?1/P.bal.pr:0;
+  $("parlAuto").innerHTML=
+    mk("safe","🛡️ Parlay Seguro (2 a 3 fijos)","Las selecciones de mayor probabilidad del día (78% a 92%), una por partido.",P.safe&&P.safe,`Hoy no hay 2 selecciones con probabilidad de 78% a 92% en partidos distintos${P.safeN===1?" (solo 1)":""}.`)
+   +mk("bal","⚖️ Parlay Equilibrado (cuota ~2.00 – 3.00)",P.bal?`Dos selecciones sólidas (62% o más cada una). ${balFair>=2&&balFair<=3.0001?"":`<b>Ojo:</b> con los partidos de hoy no se logra una cuota justa entre 2.00 y 3.00; esta es la combinación más cercana (${f2(balFair)}).`}`:"",balLegs&&P.bal.a&&balLegs.length?balLegs:null,"Hoy no hay 2 selecciones de partidos distintos con probabilidad de 62% o más.")
+   +mk("val","💎 Parlay de Valor (EV+)","Las selecciones del día con valor esperado positivo según las cuotas cargadas, sin alerta de error del modelo.",P.val&&P.val,`Hoy no hay 2 selecciones con valor esperado positivo${P.valN===1?" (solo 1)":""}. Es lo normal: cuando las probabilidades salen de las cuotas del mercado, el valor esperado queda en negativo por el margen de la casa. Escribe la cuota de tu casa en un partido (pestaña Apostar) para que aparezcan.`);
+  renderMine();
+  document.querySelectorAll("#parlAuto [data-parl]").forEach(el=>{const id=el.dataset.parl, legs=parlSets[id]; if(legs)parlUpdate(id,legs);});
+}
+function renderMine(){
+  const box=$("parlMine");
+  if(!parlay.length){box.innerHTML=`<h3>🧩 Mi parlay</h3><div class="sub">Aquí se acumulan las selecciones que agregues con "+ Agregar a mi Parlay" desde cualquier partido (pestaña Resumen). Una por partido.</div>`; return;}
+  const many=parlay.length>=2;
+  box.innerHTML=parlCard("mine","🧩 Mi parlay ("+parlay.length+")",many?"Probabilidades guardadas al agregar cada selección.":"Agrega al menos una selección más de otro partido.",parlay,{rm:true,foot:`<div class="row2"><button class="mini" type="button" id="parlClear">Vaciar</button></div>`}).replace('<div class="box parl" data-parl="mine">','<div class="parl" data-parl="mine">');
+  if(many)parlUpdate("mine",parlay); else {const c=box.querySelector(".pst, .pcalc"); box.querySelectorAll(".pst,.pcalc,#pst_mine").forEach(e=>e.remove());}
+}
+$("fParl").addEventListener("input",ev=>{
+  const id=ev.target.dataset&&ev.target.dataset.pid; if(!id)return;
+  parlOdds[id]=ev.target.value;
+  parlUpdate(id,id==="mine"?parlay:parlSets[id]||[]);
+});
+$("fParl").addEventListener("click",ev=>{
+  const t=ev.target;
+  if(t.dataset.use){const legs=parlSets[t.dataset.use]||[]; legs.forEach(l=>addLeg(l)); renderMine(); parlN(); if(featTab==="parl")renderPicks(); t.textContent="✓ Agregado a tu parlay"; return;}
+  if(t.dataset.rm){parlay=parlay.filter(x=>x.id!==t.dataset.rm); saveParlay(); parlN(); renderMine(); renderPicks(); return;}
+  if(t.id==="parlClear"){parlay=[]; saveParlay(); parlN(); renderMine(); renderPicks();}
+});
+document.querySelector(".psg").addEventListener("click",ev=>{
+  const b=ev.target.closest("button[data-ft]"); if(!b)return;
+  featTab=b.dataset.ft;
+  document.querySelectorAll(".psg button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+  $("fTrend").hidden=featTab!=="trend"; $("fParl").hidden=featTab!=="parl";
+  if(featTab==="parl")renderParl();
+});
+parlN();
 
 /* ---------- Calculadora Props (Poisson) ---------- */
 const numIn=el=>parseFloat(String(el.value).replace(",","."));
@@ -2612,6 +2828,7 @@ function render(){
     if(v!==undefined){$("o"+i).value=v;onOdds(i);}
   });
   bankMsg();
+  renderPicks();
   $("oddsSrc").textContent=(af?`Cuotas cargadas con The Odds API (${af.src}). Cámbialas por las de tu casa. `:n?`Cargamos ${n} cuotas automáticamente (promedio de varias casas). Cámbialas por las de tu casa. `:"")+"Cuota justa: la mínima para que valga la pena. Número verde o rojo: lo que ganarías o perderías en promedio por cada L 1 si el modelo acertara.";
 }
 
@@ -2640,6 +2857,7 @@ function setView(v){
   $("ctx").hidden=!(v==="list"||v==="feat"||v==="table");
   $("dayChips").hidden=v==="table"||!daysOfLeague().length;
   if(v==="table")renderTableView();
+  if(v==="feat"&&featTab==="parl")renderParl();
   document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current",b.dataset.v===(v==="match"?prevView:v)?"page":"false"));
   window.scrollTo(0,0);
 }

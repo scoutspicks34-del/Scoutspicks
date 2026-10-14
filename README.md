@@ -39,3 +39,7 @@ Pestaña "Props" (menú de abajo). Poisson con el promedio y la línea que escri
 
 ## Cuotas automáticas con The Odds API (pestaña Apostar)
 Desde el navegador: la clave se pega en la página y vive solo en `localStorage` (nunca va en el código ni en el repositorio). Cada carga cuesta 2 créditos (regions=eu × markets=h2h,totals). La respuesta se guarda 30 min por liga. Referencia: Pinnacle; si no está, promedio de las casas. Llena 1X2 y Más/Menos 1.5, 2.5 y 3.5 (las que la API traiga).
+
+## Picks sugeridos y armador de parlays
+- Resumen: tarjeta "Picks sugeridos" por partido (pick de valor si hay EV>0, prob. ≥38% y sin alerta de error del modelo; si no, pick de probabilidad 60–74% con cuota justa 1.35–1.85; y un "fijo para parlay" de 75–92%).
+- Destacados → "Armador de Parlays": escanea los partidos del día (todas las ligas, que no hayan empezado) y arma Seguro, Equilibrado y de Valor. Una selección por partido; probabilidad = producto de las individuales. Mi parlay se guarda en `localStorage`.
