@@ -1,4 +1,763 @@
 Date,HomeTeam,AwayTeam,FTHG,FTAG
+2024-08-02,TSV 1860 München,1. FC Saarbrücken,0,1
+2024-08-03,Rot-Weiss Essen,Alemannia Aachen,1,2
+2024-08-03,SV Sandhausen,VfL Osnabrück,1,0
+2024-08-03,Erzgebirge Aue,Hannover 96 II,2,1
+2024-08-03,Borussia Dortmund II,SpVgg Unterhaching,3,0
+2024-08-03,SC Verl,SV Wehen Wiesbaden,2,2
+2024-08-03,Hansa Rostock,VfB Stuttgart II,1,1
+2024-08-04,Viktoria Köln,Dynamo Dresden,1,2
+2024-08-04,Energie Cottbus,DSC Arminia Bielefeld,1,2
+2024-08-04,FC Ingolstadt 04,SV Waldhof Mannheim,2,1
+2024-08-09,Dynamo Dresden,Energie Cottbus,4,2
+2024-08-10,SpVgg Unterhaching,FC Ingolstadt 04,2,1
+2024-08-10,SV Wehen Wiesbaden,Hansa Rostock,1,0
+2024-08-10,SV Waldhof Mannheim,Viktoria Köln,1,2
+2024-08-10,VfL Osnabrück,Erzgebirge Aue,0,2
+2024-08-10,Alemannia Aachen,SC Verl,1,1
+2024-08-10,DSC Arminia Bielefeld,Borussia Dortmund II,1,0
+2024-08-11,Hannover 96 II,Rot-Weiss Essen,1,3
+2024-08-11,VfB Stuttgart II,TSV 1860 München,3,1
+2024-08-11,1. FC Saarbrücken,SV Sandhausen,0,1
+2024-08-23,Erzgebirge Aue,Dynamo Dresden,2,0
+2024-08-24,VfL Osnabrück,SpVgg Unterhaching,4,2
+2024-08-24,Hansa Rostock,Borussia Dortmund II,1,1
+2024-08-24,Rot-Weiss Essen,DSC Arminia Bielefeld,0,0
+2024-08-24,1. FC Saarbrücken,FC Ingolstadt 04,2,3
+2024-08-24,SV Sandhausen,Hannover 96 II,0,1
+2024-08-24,Energie Cottbus,Alemannia Aachen,2,1
+2024-08-25,TSV 1860 München,Viktoria Köln,1,3
+2024-08-25,SC Verl,SV Waldhof Mannheim,1,1
+2024-08-25,VfB Stuttgart II,SV Wehen Wiesbaden,2,2
+2024-08-30,Viktoria Köln,Hansa Rostock,3,0
+2024-08-31,Alemannia Aachen,Erzgebirge Aue,1,2
+2024-08-31,SV Waldhof Mannheim,1. FC Saarbrücken,0,1
+2024-08-31,Dynamo Dresden,VfB Stuttgart II,2,0
+2024-08-31,DSC Arminia Bielefeld,SV Sandhausen,1,1
+2024-08-31,FC Ingolstadt 04,TSV 1860 München,1,2
+2024-08-31,Borussia Dortmund II,VfL Osnabrück,1,1
+2024-09-01,SV Wehen Wiesbaden,Energie Cottbus,2,1
+2024-09-01,SpVgg Unterhaching,Rot-Weiss Essen,2,0
+2024-09-01,Hannover 96 II,SC Verl,1,2
+2024-09-13,SV Sandhausen,Borussia Dortmund II,3,1
+2024-09-14,Hansa Rostock,SV Waldhof Mannheim,1,1
+2024-09-14,VfB Stuttgart II,FC Ingolstadt 04,3,2
+2024-09-14,Rot-Weiss Essen,SV Wehen Wiesbaden,0,3
+2024-09-14,TSV 1860 München,Dynamo Dresden,2,3
+2024-09-14,1. FC Saarbrücken,SpVgg Unterhaching,1,1
+2024-09-14,VfL Osnabrück,Hannover 96 II,1,1
+2024-09-15,Erzgebirge Aue,DSC Arminia Bielefeld,1,3
+2024-09-15,SC Verl,Energie Cottbus,0,3
+2024-09-15,Alemannia Aachen,Viktoria Köln,1,0
+2024-09-20,SpVgg Unterhaching,Erzgebirge Aue,2,2
+2024-09-21,SV Waldhof Mannheim,VfL Osnabrück,3,2
+2024-09-21,FC Ingolstadt 04,Rot-Weiss Essen,2,2
+2024-09-21,Energie Cottbus,VfB Stuttgart II,4,0
+2024-09-21,SV Wehen Wiesbaden,SV Sandhausen,1,3
+2024-09-21,Dynamo Dresden,Hansa Rostock,1,1
+2024-09-21,DSC Arminia Bielefeld,TSV 1860 München,0,1
+2024-09-22,Hannover 96 II,1. FC Saarbrücken,1,3
+2024-09-22,Viktoria Köln,SC Verl,2,1
+2024-09-22,Borussia Dortmund II,Alemannia Aachen,3,0
+2024-09-24,VfB Stuttgart II,DSC Arminia Bielefeld,3,0
+2024-09-24,Erzgebirge Aue,SV Wehen Wiesbaden,2,1
+2024-09-24,SV Sandhausen,FC Ingolstadt 04,4,3
+2024-09-24,VfL Osnabrück,Energie Cottbus,2,5
+2024-09-24,Hansa Rostock,SpVgg Unterhaching,4,1
+2024-09-25,Alemannia Aachen,SV Waldhof Mannheim,0,0
+2024-09-25,Rot-Weiss Essen,Borussia Dortmund II,3,1
+2024-09-25,1. FC Saarbrücken,Viktoria Köln,1,0
+2024-09-25,TSV 1860 München,Hannover 96 II,1,0
+2024-09-25,SC Verl,Dynamo Dresden,0,3
+2024-09-27,SpVgg Unterhaching,SV Sandhausen,0,0
+2024-09-28,SV Waldhof Mannheim,Rot-Weiss Essen,1,0
+2024-09-28,Viktoria Köln,Erzgebirge Aue,2,0
+2024-09-28,SV Wehen Wiesbaden,VfL Osnabrück,2,1
+2024-09-28,Borussia Dortmund II,TSV 1860 München,1,2
+2024-09-28,Hannover 96 II,VfB Stuttgart II,3,1
+2024-09-28,Energie Cottbus,1. FC Saarbrücken,4,1
+2024-09-29,FC Ingolstadt 04,Hansa Rostock,2,1
+2024-09-29,Dynamo Dresden,Alemannia Aachen,0,0
+2024-09-29,DSC Arminia Bielefeld,SC Verl,2,1
+2024-10-04,Borussia Dortmund II,Dynamo Dresden,2,1
+2024-10-05,Erzgebirge Aue,Hansa Rostock,1,2
+2024-10-05,TSV 1860 München,SV Wehen Wiesbaden,2,3
+2024-10-05,SV Sandhausen,SV Waldhof Mannheim,2,1
+2024-10-05,Rot-Weiss Essen,Viktoria Köln,2,1
+2024-10-05,SC Verl,SpVgg Unterhaching,2,0
+2024-10-05,Alemannia Aachen,FC Ingolstadt 04,1,1
+2024-10-06,Hannover 96 II,Energie Cottbus,0,0
+2024-10-06,1. FC Saarbrücken,DSC Arminia Bielefeld,0,0
+2024-10-06,VfL Osnabrück,VfB Stuttgart II,1,0
+2024-10-18,SV Waldhof Mannheim,Erzgebirge Aue,3,0
+2024-10-19,Hansa Rostock,Alemannia Aachen,1,2
+2024-10-19,FC Ingolstadt 04,SC Verl,1,1
+2024-10-19,Viktoria Köln,Borussia Dortmund II,3,5
+2024-10-19,SV Wehen Wiesbaden,Hannover 96 II,1,5
+2024-10-19,Energie Cottbus,SV Sandhausen,1,1
+2024-10-19,VfB Stuttgart II,1. FC Saarbrücken,2,3
+2024-10-20,Dynamo Dresden,Rot-Weiss Essen,3,3
+2024-10-20,DSC Arminia Bielefeld,VfL Osnabrück,3,1
+2024-10-20,SpVgg Unterhaching,TSV 1860 München,2,2
+2024-10-22,1. FC Saarbrücken,Hansa Rostock,2,0
+2024-10-22,Viktoria Köln,FC Ingolstadt 04,4,4
+2024-10-22,Erzgebirge Aue,Energie Cottbus,1,3
+2024-10-22,Borussia Dortmund II,SV Waldhof Mannheim,0,1
+2024-10-22,SV Sandhausen,VfB Stuttgart II,1,1
+2024-10-23,Hannover 96 II,DSC Arminia Bielefeld,1,4
+2024-10-23,SV Wehen Wiesbaden,Dynamo Dresden,1,0
+2024-10-23,Alemannia Aachen,SpVgg Unterhaching,3,1
+2024-10-23,Rot-Weiss Essen,SC Verl,1,3
+2024-10-23,TSV 1860 München,VfL Osnabrück,2,2
+2024-10-25,FC Ingolstadt 04,Borussia Dortmund II,5,3
+2024-10-26,DSC Arminia Bielefeld,Alemannia Aachen,1,1
+2024-10-26,VfL Osnabrück,1. FC Saarbrücken,1,1
+2024-10-26,Hansa Rostock,Rot-Weiss Essen,4,0
+2024-10-26,SpVgg Unterhaching,Viktoria Köln,1,1
+2024-10-26,Dynamo Dresden,Hannover 96 II,2,1
+2024-10-26,SC Verl,SV Sandhausen,1,1
+2024-10-27,Energie Cottbus,TSV 1860 München,5,1
+2024-10-27,VfB Stuttgart II,Erzgebirge Aue,0,1
+2024-10-27,SV Waldhof Mannheim,SV Wehen Wiesbaden,2,2
+2024-11-01,Viktoria Köln,VfB Stuttgart II,2,0
+2024-11-02,Erzgebirge Aue,1. FC Saarbrücken,1,1
+2024-11-02,FC Ingolstadt 04,Dynamo Dresden,1,1
+2024-11-02,Rot-Weiss Essen,Energie Cottbus,4,0
+2024-11-02,SV Sandhausen,TSV 1860 München,0,3
+2024-11-02,Hansa Rostock,VfL Osnabrück,2,0
+2024-11-02,Alemannia Aachen,Hannover 96 II,0,0
+2024-11-03,SpVgg Unterhaching,SV Waldhof Mannheim,1,1
+2024-11-03,SV Wehen Wiesbaden,DSC Arminia Bielefeld,0,0
+2024-11-03,Borussia Dortmund II,SC Verl,3,1
+2024-11-08,SC Verl,Hansa Rostock,1,0
+2024-11-09,VfL Osnabrück,Dynamo Dresden,0,3
+2024-11-09,Energie Cottbus,Borussia Dortmund II,3,3
+2024-11-09,SV Sandhausen,Alemannia Aachen,4,0
+2024-11-09,1. FC Saarbrücken,SV Wehen Wiesbaden,3,1
+2024-11-09,TSV 1860 München,SV Waldhof Mannheim,3,0
+2024-11-09,DSC Arminia Bielefeld,Viktoria Köln,2,0
+2024-11-10,Hannover 96 II,FC Ingolstadt 04,0,4
+2024-11-10,Erzgebirge Aue,Rot-Weiss Essen,2,1
+2024-11-10,VfB Stuttgart II,SpVgg Unterhaching,3,2
+2024-11-22,Viktoria Köln,Energie Cottbus,0,1
+2024-11-23,Hansa Rostock,DSC Arminia Bielefeld,2,1
+2024-11-23,Dynamo Dresden,1. FC Saarbrücken,1,1
+2024-11-23,Rot-Weiss Essen,SV Sandhausen,1,1
+2024-11-23,Alemannia Aachen,TSV 1860 München,1,1
+2024-11-23,SC Verl,VfB Stuttgart II,2,2
+2024-11-23,SpVgg Unterhaching,SV Wehen Wiesbaden,1,1
+2024-11-24,SV Waldhof Mannheim,Hannover 96 II,2,1
+2024-11-24,FC Ingolstadt 04,VfL Osnabrück,4,2
+2024-11-24,Borussia Dortmund II,Erzgebirge Aue,3,1
+2024-11-29,DSC Arminia Bielefeld,FC Ingolstadt 04,1,0
+2024-11-30,Energie Cottbus,SpVgg Unterhaching,2,0
+2024-11-30,SV Sandhausen,Dynamo Dresden,2,4
+2024-11-30,Hannover 96 II,Borussia Dortmund II,2,0
+2024-11-30,Erzgebirge Aue,SC Verl,2,5
+2024-11-30,TSV 1860 München,Hansa Rostock,1,2
+2024-11-30,VfB Stuttgart II,SV Waldhof Mannheim,2,0
+2024-12-01,VfL Osnabrück,Alemannia Aachen,1,1
+2024-12-01,1. FC Saarbrücken,Rot-Weiss Essen,1,0
+2024-12-01,SV Wehen Wiesbaden,Viktoria Köln,3,1
+2024-12-06,SC Verl,1. FC Saarbrücken,1,1
+2024-12-07,FC Ingolstadt 04,Erzgebirge Aue,1,0
+2024-12-07,Hansa Rostock,SV Sandhausen,1,0
+2024-12-07,Borussia Dortmund II,SV Wehen Wiesbaden,2,2
+2024-12-07,SpVgg Unterhaching,Hannover 96 II,1,2
+2024-12-07,SV Waldhof Mannheim,Energie Cottbus,0,1
+2024-12-07,Alemannia Aachen,VfB Stuttgart II,2,1
+2024-12-08,Rot-Weiss Essen,TSV 1860 München,0,3
+2024-12-08,Dynamo Dresden,DSC Arminia Bielefeld,3,0
+2024-12-08,Viktoria Köln,VfL Osnabrück,2,0
+2024-12-13,Dynamo Dresden,SV Waldhof Mannheim,2,1
+2024-12-14,VfB Stuttgart II,Borussia Dortmund II,0,3
+2024-12-14,Hannover 96 II,Viktoria Köln,1,2
+2024-12-14,DSC Arminia Bielefeld,SpVgg Unterhaching,3,3
+2024-12-14,SV Sandhausen,Erzgebirge Aue,4,6
+2024-12-14,SV Wehen Wiesbaden,FC Ingolstadt 04,2,5
+2024-12-14,TSV 1860 München,SC Verl,0,4
+2024-12-15,Energie Cottbus,Hansa Rostock,3,1
+2024-12-15,VfL Osnabrück,Rot-Weiss Essen,2,0
+2024-12-15,1. FC Saarbrücken,Alemannia Aachen,1,1
+2024-12-20,FC Ingolstadt 04,Energie Cottbus,1,1
+2024-12-21,Erzgebirge Aue,TSV 1860 München,3,1
+2024-12-21,Borussia Dortmund II,1. FC Saarbrücken,0,0
+2024-12-21,Rot-Weiss Essen,VfB Stuttgart II,2,2
+2024-12-21,Viktoria Köln,SV Sandhausen,2,0
+2024-12-21,SpVgg Unterhaching,Dynamo Dresden,0,3
+2024-12-21,Alemannia Aachen,SV Wehen Wiesbaden,0,0
+2024-12-22,SV Waldhof Mannheim,DSC Arminia Bielefeld,1,1
+2024-12-22,SC Verl,VfL Osnabrück,1,1
+2024-12-22,Hansa Rostock,Hannover 96 II,1,0
+2025-01-17,Hannover 96 II,Erzgebirge Aue,2,1
+2025-01-18,1. FC Saarbrücken,TSV 1860 München,4,0
+2025-01-18,VfB Stuttgart II,Hansa Rostock,0,3
+2025-01-18,VfL Osnabrück,SV Sandhausen,3,2
+2025-01-18,SpVgg Unterhaching,Borussia Dortmund II,1,2
+2025-01-18,DSC Arminia Bielefeld,Energie Cottbus,0,2
+2025-01-18,SV Wehen Wiesbaden,SC Verl,0,1
+2025-01-19,Dynamo Dresden,Viktoria Köln,2,3
+2025-01-19,Alemannia Aachen,Rot-Weiss Essen,2,0
+2025-01-19,SV Waldhof Mannheim,FC Ingolstadt 04,0,0
+2025-01-24,Viktoria Köln,SV Waldhof Mannheim,1,0
+2025-01-25,Erzgebirge Aue,VfL Osnabrück,0,0
+2025-01-25,Hansa Rostock,SV Wehen Wiesbaden,1,4
+2025-01-25,TSV 1860 München,VfB Stuttgart II,1,1
+2025-01-25,Energie Cottbus,Dynamo Dresden,1,1
+2025-01-25,SC Verl,Alemannia Aachen,2,1
+2025-01-25,SV Sandhausen,1. FC Saarbrücken,3,4
+2025-01-26,Rot-Weiss Essen,Hannover 96 II,5,1
+2025-01-26,FC Ingolstadt 04,SpVgg Unterhaching,3,1
+2025-01-26,Borussia Dortmund II,DSC Arminia Bielefeld,0,4
+2025-01-31,Alemannia Aachen,Energie Cottbus,0,0
+2025-02-01,SV Waldhof Mannheim,SC Verl,2,2
+2025-02-01,FC Ingolstadt 04,1. FC Saarbrücken,1,0
+2025-02-01,SV Wehen Wiesbaden,VfB Stuttgart II,2,0
+2025-02-01,Borussia Dortmund II,Hansa Rostock,0,2
+2025-02-01,Dynamo Dresden,Erzgebirge Aue,2,1
+2025-02-01,Viktoria Köln,TSV 1860 München,1,2
+2025-02-02,DSC Arminia Bielefeld,Rot-Weiss Essen,1,2
+2025-02-02,SpVgg Unterhaching,VfL Osnabrück,2,3
+2025-02-02,Hannover 96 II,SV Sandhausen,2,2
+2025-02-07,SV Sandhausen,DSC Arminia Bielefeld,1,0
+2025-02-08,1. FC Saarbrücken,SV Waldhof Mannheim,2,1
+2025-02-08,Erzgebirge Aue,Alemannia Aachen,1,1
+2025-02-08,Energie Cottbus,SV Wehen Wiesbaden,2,1
+2025-02-08,Rot-Weiss Essen,SpVgg Unterhaching,1,1
+2025-02-08,VfB Stuttgart II,Dynamo Dresden,2,1
+2025-02-08,TSV 1860 München,FC Ingolstadt 04,1,1
+2025-02-09,Hansa Rostock,Viktoria Köln,1,1
+2025-02-09,SC Verl,Hannover 96 II,1,0
+2025-02-09,VfL Osnabrück,Borussia Dortmund II,1,0
+2025-02-14,Viktoria Köln,Alemannia Aachen,3,1
+2025-02-15,SV Waldhof Mannheim,Hansa Rostock,5,0
+2025-02-15,FC Ingolstadt 04,VfB Stuttgart II,1,1
+2025-02-15,Hannover 96 II,VfL Osnabrück,1,5
+2025-02-15,SV Wehen Wiesbaden,Rot-Weiss Essen,1,3
+2025-02-15,DSC Arminia Bielefeld,Erzgebirge Aue,2,1
+2025-02-15,Borussia Dortmund II,SV Sandhausen,1,0
+2025-02-16,SpVgg Unterhaching,1. FC Saarbrücken,2,0
+2025-02-16,Energie Cottbus,SC Verl,1,0
+2025-02-16,Dynamo Dresden,TSV 1860 München,5,2
+2025-02-21,TSV 1860 München,DSC Arminia Bielefeld,0,3
+2025-02-22,Hansa Rostock,Dynamo Dresden,1,0
+2025-02-22,Erzgebirge Aue,SpVgg Unterhaching,1,0
+2025-02-22,Alemannia Aachen,Borussia Dortmund II,2,2
+2025-02-22,Rot-Weiss Essen,FC Ingolstadt 04,2,0
+2025-02-22,SC Verl,Viktoria Köln,1,1
+2025-02-22,1. FC Saarbrücken,Hannover 96 II,4,1
+2025-02-23,VfB Stuttgart II,Energie Cottbus,2,0
+2025-02-23,VfL Osnabrück,SV Waldhof Mannheim,1,1
+2025-02-23,SV Sandhausen,SV Wehen Wiesbaden,0,1
+2025-02-28,Viktoria Köln,1. FC Saarbrücken,1,2
+2025-03-01,Energie Cottbus,VfL Osnabrück,1,2
+2025-03-01,FC Ingolstadt 04,SV Sandhausen,2,1
+2025-03-01,Hannover 96 II,TSV 1860 München,1,3
+2025-03-01,SV Wehen Wiesbaden,Erzgebirge Aue,0,2
+2025-03-01,Borussia Dortmund II,Rot-Weiss Essen,0,1
+2025-03-01,Dynamo Dresden,SC Verl,3,0
+2025-03-02,SV Waldhof Mannheim,Alemannia Aachen,2,1
+2025-03-02,DSC Arminia Bielefeld,VfB Stuttgart II,4,1
+2025-03-07,VfL Osnabrück,SV Wehen Wiesbaden,0,1
+2025-03-08,1. FC Saarbrücken,Energie Cottbus,2,1
+2025-03-08,VfB Stuttgart II,Hannover 96 II,2,1
+2025-03-08,SV Sandhausen,SpVgg Unterhaching,2,2
+2025-03-08,Hansa Rostock,FC Ingolstadt 04,2,0
+2025-03-08,Alemannia Aachen,Dynamo Dresden,0,1
+2025-03-08,SC Verl,DSC Arminia Bielefeld,2,1
+2025-03-09,TSV 1860 München,Borussia Dortmund II,1,0
+2025-03-09,Erzgebirge Aue,Viktoria Köln,2,1
+2025-03-09,Rot-Weiss Essen,SV Waldhof Mannheim,1,0
+2025-03-11,VfB Stuttgart II,VfL Osnabrück,1,2
+2025-03-11,SpVgg Unterhaching,SC Verl,1,2
+2025-03-11,DSC Arminia Bielefeld,1. FC Saarbrücken,3,1
+2025-03-11,FC Ingolstadt 04,Alemannia Aachen,0,3
+2025-03-11,Energie Cottbus,Hannover 96 II,2,2
+2025-03-12,SV Waldhof Mannheim,SV Sandhausen,3,2
+2025-03-12,Viktoria Köln,Rot-Weiss Essen,1,0
+2025-03-12,Hansa Rostock,Erzgebirge Aue,4,1
+2025-03-12,SV Wehen Wiesbaden,TSV 1860 München,0,0
+2025-03-12,Dynamo Dresden,Borussia Dortmund II,0,0
+2025-03-14,1. FC Saarbrücken,VfB Stuttgart II,0,2
+2025-03-15,VfL Osnabrück,DSC Arminia Bielefeld,0,1
+2025-03-15,Hannover 96 II,SV Wehen Wiesbaden,3,2
+2025-03-15,Borussia Dortmund II,Viktoria Köln,1,1
+2025-03-15,SC Verl,FC Ingolstadt 04,1,4
+2025-03-15,Rot-Weiss Essen,Dynamo Dresden,1,1
+2025-03-15,TSV 1860 München,SpVgg Unterhaching,2,1
+2025-03-16,SV Sandhausen,Energie Cottbus,0,1
+2025-03-16,Erzgebirge Aue,SV Waldhof Mannheim,0,1
+2025-03-16,Alemannia Aachen,Hansa Rostock,2,1
+2025-03-28,SC Verl,Rot-Weiss Essen,3,0
+2025-03-29,VfL Osnabrück,TSV 1860 München,1,0
+2025-03-29,SV Waldhof Mannheim,Borussia Dortmund II,0,0
+2025-03-29,Hansa Rostock,1. FC Saarbrücken,0,0
+2025-03-29,SpVgg Unterhaching,Alemannia Aachen,0,2
+2025-03-29,Energie Cottbus,Erzgebirge Aue,1,0
+2025-03-29,DSC Arminia Bielefeld,Hannover 96 II,2,2
+2025-03-30,FC Ingolstadt 04,Viktoria Köln,3,1
+2025-03-30,Dynamo Dresden,SV Wehen Wiesbaden,2,0
+2025-03-30,VfB Stuttgart II,SV Sandhausen,2,1
+2025-04-04,Hannover 96 II,Dynamo Dresden,2,3
+2025-04-05,Viktoria Köln,SpVgg Unterhaching,3,1
+2025-04-05,Erzgebirge Aue,VfB Stuttgart II,2,1
+2025-04-05,SV Wehen Wiesbaden,SV Waldhof Mannheim,2,2
+2025-04-05,TSV 1860 München,Energie Cottbus,5,1
+2025-04-05,1. FC Saarbrücken,VfL Osnabrück,1,1
+2025-04-05,Alemannia Aachen,DSC Arminia Bielefeld,0,1
+2025-04-06,Borussia Dortmund II,FC Ingolstadt 04,3,3
+2025-04-06,SV Sandhausen,SC Verl,1,3
+2025-04-06,Rot-Weiss Essen,Hansa Rostock,2,1
+2025-04-08,SV Waldhof Mannheim,SpVgg Unterhaching,0,2
+2025-04-08,VfB Stuttgart II,Viktoria Köln,1,2
+2025-04-08,DSC Arminia Bielefeld,SV Wehen Wiesbaden,4,2
+2025-04-08,1. FC Saarbrücken,Erzgebirge Aue,2,0
+2025-04-08,Hannover 96 II,Alemannia Aachen,1,1
+2025-04-09,Energie Cottbus,Rot-Weiss Essen,0,1
+2025-04-09,TSV 1860 München,SV Sandhausen,2,0
+2025-04-09,VfL Osnabrück,Hansa Rostock,0,1
+2025-04-09,Dynamo Dresden,FC Ingolstadt 04,2,2
+2025-04-09,SC Verl,Borussia Dortmund II,0,1
+2025-04-11,SV Wehen Wiesbaden,1. FC Saarbrücken,1,1
+2025-04-12,FC Ingolstadt 04,Hannover 96 II,3,3
+2025-04-12,SpVgg Unterhaching,VfB Stuttgart II,2,2
+2025-04-12,Rot-Weiss Essen,Erzgebirge Aue,4,2
+2025-04-12,Hansa Rostock,SC Verl,4,0
+2025-04-12,Dynamo Dresden,VfL Osnabrück,0,1
+2025-04-12,Alemannia Aachen,SV Sandhausen,2,1
+2025-04-13,SV Waldhof Mannheim,TSV 1860 München,0,3
+2025-04-13,Borussia Dortmund II,Energie Cottbus,4,1
+2025-04-13,Viktoria Köln,DSC Arminia Bielefeld,0,2
+2025-04-19,TSV 1860 München,Alemannia Aachen,2,1
+2025-04-19,SV Sandhausen,Rot-Weiss Essen,0,2
+2025-04-19,Energie Cottbus,Viktoria Köln,1,0
+2025-04-19,SV Wehen Wiesbaden,SpVgg Unterhaching,3,0
+2025-04-19,DSC Arminia Bielefeld,Hansa Rostock,4,0
+2025-04-19,VfB Stuttgart II,SC Verl,1,1
+2025-04-19,VfL Osnabrück,FC Ingolstadt 04,1,0
+2025-04-20,1. FC Saarbrücken,Dynamo Dresden,1,4
+2025-04-20,Hannover 96 II,SV Waldhof Mannheim,1,1
+2025-04-20,Erzgebirge Aue,Borussia Dortmund II,2,1
+2025-04-25,Hansa Rostock,TSV 1860 München,1,0
+2025-04-26,Viktoria Köln,SV Wehen Wiesbaden,2,0
+2025-04-26,Dynamo Dresden,SV Sandhausen,2,1
+2025-04-26,Borussia Dortmund II,Hannover 96 II,0,4
+2025-04-26,SpVgg Unterhaching,Energie Cottbus,1,1
+2025-04-26,Rot-Weiss Essen,1. FC Saarbrücken,0,3
+2025-04-26,SC Verl,Erzgebirge Aue,5,1
+2025-04-27,FC Ingolstadt 04,DSC Arminia Bielefeld,0,3
+2025-04-27,Alemannia Aachen,VfL Osnabrück,1,0
+2025-04-27,SV Waldhof Mannheim,VfB Stuttgart II,0,0
+2025-05-02,VfL Osnabrück,Viktoria Köln,2,0
+2025-05-03,TSV 1860 München,Rot-Weiss Essen,1,3
+2025-05-03,1. FC Saarbrücken,SC Verl,4,3
+2025-05-03,VfB Stuttgart II,Alemannia Aachen,2,1
+2025-05-03,SV Wehen Wiesbaden,Borussia Dortmund II,4,2
+2025-05-03,SV Sandhausen,Hansa Rostock,0,3
+2025-05-03,DSC Arminia Bielefeld,Dynamo Dresden,1,1
+2025-05-04,Energie Cottbus,SV Waldhof Mannheim,2,4
+2025-05-04,Erzgebirge Aue,FC Ingolstadt 04,1,0
+2025-05-04,Hannover 96 II,SpVgg Unterhaching,0,0
+2025-05-09,Borussia Dortmund II,VfB Stuttgart II,0,1
+2025-05-10,Alemannia Aachen,1. FC Saarbrücken,4,2
+2025-05-10,Hansa Rostock,Energie Cottbus,1,3
+2025-05-10,SC Verl,TSV 1860 München,2,2
+2025-05-10,SV Waldhof Mannheim,Dynamo Dresden,1,0
+2025-05-10,Erzgebirge Aue,SV Sandhausen,2,3
+2025-05-10,FC Ingolstadt 04,SV Wehen Wiesbaden,2,3
+2025-05-11,SpVgg Unterhaching,DSC Arminia Bielefeld,1,2
+2025-05-11,Rot-Weiss Essen,VfL Osnabrück,3,1
+2025-05-11,Viktoria Köln,Hannover 96 II,2,0
+2025-05-17,1. FC Saarbrücken,Borussia Dortmund II,2,1
+2025-05-17,VfB Stuttgart II,Rot-Weiss Essen,1,1
+2025-05-17,Hannover 96 II,Hansa Rostock,2,1
+2025-05-17,VfL Osnabrück,SC Verl,0,3
+2025-05-17,SV Wehen Wiesbaden,Alemannia Aachen,2,1
+2025-05-17,Dynamo Dresden,SpVgg Unterhaching,3,0
+2025-05-17,TSV 1860 München,Erzgebirge Aue,1,1
+2025-05-17,DSC Arminia Bielefeld,SV Waldhof Mannheim,1,0
+2025-05-17,SV Sandhausen,Viktoria Köln,0,4
+2025-05-17,Energie Cottbus,FC Ingolstadt 04,1,4
+2025-08-01,Rot-Weiss Essen,TSV 1860 München,1,1
+2025-08-02,FC Ingolstadt 04,Jahn Regensburg,1,1
+2025-08-02,VfL Osnabrück,Alemannia Aachen,0,0
+2025-08-02,Energie Cottbus,1. FC Saarbrücken,3,3
+2025-08-02,TSG 1899 Hoffenheim II,TSV Havelse,0,0
+2025-08-02,SV Waldhof Mannheim,SC Verl,2,2
+2025-08-02,MSV Duisburg,VfB Stuttgart II,2,1
+2025-08-03,Erzgebirge Aue,Hansa Rostock,0,0
+2025-08-03,Viktoria Köln,1. FC Schweinfurt 05,2,0
+2025-08-03,SV Wehen Wiesbaden,SSV Ulm 1846,3,1
+2025-08-08,1. FC Schweinfurt 05,Energie Cottbus,0,2
+2025-08-09,1. FC Saarbrücken,Viktoria Köln,2,1
+2025-08-09,SSV Ulm 1846,Erzgebirge Aue,1,0
+2025-08-09,TSV Havelse,Rot-Weiss Essen,1,1
+2025-08-09,Alemannia Aachen,TSG 1899 Hoffenheim II,2,4
+2025-08-09,TSV 1860 München,VfL Osnabrück,3,1
+2025-08-09,SC Verl,SV Wehen Wiesbaden,2,2
+2025-08-10,Jahn Regensburg,MSV Duisburg,0,4
+2025-08-10,Hansa Rostock,SV Waldhof Mannheim,1,0
+2025-08-10,VfB Stuttgart II,FC Ingolstadt 04,2,1
+2025-08-22,SV Wehen Wiesbaden,Rot-Weiss Essen,3,4
+2025-08-23,VfB Stuttgart II,SC Verl,1,1
+2025-08-23,VfL Osnabrück,1. FC Saarbrücken,2,0
+2025-08-23,Jahn Regensburg,1. FC Schweinfurt 05,3,0
+2025-08-23,Alemannia Aachen,TSV 1860 München,0,2
+2025-08-23,TSG 1899 Hoffenheim II,Energie Cottbus,4,1
+2025-08-23,MSV Duisburg,SSV Ulm 1846,2,1
+2025-08-24,FC Ingolstadt 04,Hansa Rostock,1,1
+2025-08-24,Erzgebirge Aue,TSV Havelse,2,1
+2025-08-24,SV Waldhof Mannheim,Viktoria Köln,2,0
+2025-08-29,Viktoria Köln,Jahn Regensburg,1,0
+2025-08-30,1. FC Saarbrücken,Erzgebirge Aue,4,1
+2025-08-30,Energie Cottbus,FC Ingolstadt 04,1,1
+2025-08-30,TSV Havelse,VfL Osnabrück,0,2
+2025-08-30,TSV 1860 München,VfB Stuttgart II,1,1
+2025-08-30,SC Verl,MSV Duisburg,2,3
+2025-08-30,Hansa Rostock,TSG 1899 Hoffenheim II,0,1
+2025-08-31,SSV Ulm 1846,SV Waldhof Mannheim,1,2
+2025-08-31,1. FC Schweinfurt 05,SV Wehen Wiesbaden,0,1
+2025-08-31,Rot-Weiss Essen,Alemannia Aachen,2,3
+2025-09-12,Jahn Regensburg,Rot-Weiss Essen,1,3
+2025-09-13,FC Ingolstadt 04,1. FC Schweinfurt 05,2,3
+2025-09-13,VfB Stuttgart II,1. FC Saarbrücken,1,3
+2025-09-13,Erzgebirge Aue,Viktoria Köln,0,3
+2025-09-13,MSV Duisburg,SV Wehen Wiesbaden,3,1
+2025-09-13,TSG 1899 Hoffenheim II,SC Verl,2,4
+2025-09-13,Alemannia Aachen,SSV Ulm 1846,1,3
+2025-09-14,VfL Osnabrück,Hansa Rostock,0,0
+2025-09-14,SV Waldhof Mannheim,Energie Cottbus,0,3
+2025-09-14,TSV 1860 München,TSV Havelse,3,2
+2025-09-16,1. FC Saarbrücken,SSV Ulm 1846,3,1
+2025-09-16,Viktoria Köln,TSG 1899 Hoffenheim II,2,1
+2025-09-16,SV Wehen Wiesbaden,Jahn Regensburg,2,0
+2025-09-16,SC Verl,Alemannia Aachen,2,1
+2025-09-16,1. FC Schweinfurt 05,MSV Duisburg,0,3
+2025-09-17,SV Waldhof Mannheim,VfB Stuttgart II,0,1
+2025-09-17,Energie Cottbus,Erzgebirge Aue,2,1
+2025-09-17,Hansa Rostock,TSV 1860 München,2,1
+2025-09-17,TSV Havelse,FC Ingolstadt 04,2,6
+2025-09-17,Rot-Weiss Essen,VfL Osnabrück,1,1
+2025-09-19,1. FC Saarbrücken,1. FC Schweinfurt 05,2,1
+2025-09-20,FC Ingolstadt 04,SV Wehen Wiesbaden,0,0
+2025-09-20,VfB Stuttgart II,Viktoria Köln,2,1
+2025-09-20,VfL Osnabrück,Erzgebirge Aue,3,1
+2025-09-20,Alemannia Aachen,SV Waldhof Mannheim,3,2
+2025-09-20,Rot-Weiss Essen,Hansa Rostock,3,0
+2025-09-20,TSV 1860 München,TSG 1899 Hoffenheim II,1,5
+2025-09-21,TSV Havelse,MSV Duisburg,1,1
+2025-09-21,SC Verl,Energie Cottbus,2,1
+2025-09-21,SSV Ulm 1846,Jahn Regensburg,2,1
+2025-09-26,Energie Cottbus,VfB Stuttgart II,5,0
+2025-09-27,Erzgebirge Aue,TSV 1860 München,2,0
+2025-09-27,Hansa Rostock,TSV Havelse,1,1
+2025-09-27,SV Wehen Wiesbaden,1. FC Saarbrücken,1,1
+2025-09-27,MSV Duisburg,FC Ingolstadt 04,2,1
+2025-09-27,1. FC Schweinfurt 05,Alemannia Aachen,1,5
+2025-09-27,SV Waldhof Mannheim,Rot-Weiss Essen,6,1
+2025-09-28,Jahn Regensburg,SC Verl,2,0
+2025-09-28,TSG 1899 Hoffenheim II,SSV Ulm 1846,1,1
+2025-09-28,Viktoria Köln,VfL Osnabrück,0,0
+2025-09-30,1. FC Saarbrücken,MSV Duisburg,0,0
+2025-09-30,VfB Stuttgart II,SV Wehen Wiesbaden,0,0
+2025-09-30,Hansa Rostock,Energie Cottbus,1,3
+2025-09-30,TSV Havelse,SV Waldhof Mannheim,2,3
+2025-09-30,Alemannia Aachen,Erzgebirge Aue,0,1
+2025-10-01,SSV Ulm 1846,1. FC Schweinfurt 05,5,1
+2025-10-01,VfL Osnabrück,Jahn Regensburg,2,0
+2025-10-01,Rot-Weiss Essen,TSG 1899 Hoffenheim II,3,1
+2025-10-01,TSV 1860 München,Viktoria Köln,2,2
+2025-10-01,SC Verl,FC Ingolstadt 04,2,2
+2025-10-03,MSV Duisburg,Hansa Rostock,2,2
+2025-10-04,SV Waldhof Mannheim,VfL Osnabrück,1,4
+2025-10-04,FC Ingolstadt 04,SSV Ulm 1846,4,1
+2025-10-04,Viktoria Köln,TSV Havelse,4,1
+2025-10-04,Jahn Regensburg,1. FC Saarbrücken,1,1
+2025-10-04,1. FC Schweinfurt 05,SC Verl,1,2
+2025-10-04,Energie Cottbus,Alemannia Aachen,3,2
+2025-10-05,Erzgebirge Aue,Rot-Weiss Essen,2,2
+2025-10-05,SV Wehen Wiesbaden,TSV 1860 München,1,0
+2025-10-05,TSG 1899 Hoffenheim II,VfB Stuttgart II,1,3
+2025-10-17,Erzgebirge Aue,SV Waldhof Mannheim,0,2
+2025-10-18,1. FC Saarbrücken,SC Verl,2,4
+2025-10-18,VfB Stuttgart II,1. FC Schweinfurt 05,3,0
+2025-10-18,VfL Osnabrück,TSG 1899 Hoffenheim II,0,4
+2025-10-18,Hansa Rostock,SV Wehen Wiesbaden,3,0
+2025-10-18,Alemannia Aachen,FC Ingolstadt 04,0,1
+2025-10-18,Rot-Weiss Essen,Viktoria Köln,1,0
+2025-10-19,SSV Ulm 1846,Energie Cottbus,1,2
+2025-10-19,TSV 1860 München,MSV Duisburg,3,1
+2025-10-19,TSV Havelse,Jahn Regensburg,1,2
+2025-10-24,SV Wehen Wiesbaden,Alemannia Aachen,1,2
+2025-10-25,SV Waldhof Mannheim,TSV 1860 München,3,1
+2025-10-25,FC Ingolstadt 04,1. FC Saarbrücken,2,1
+2025-10-25,Energie Cottbus,TSV Havelse,4,3
+2025-10-25,Jahn Regensburg,VfB Stuttgart II,3,2
+2025-10-25,SC Verl,SSV Ulm 1846,5,0
+2025-10-25,1. FC Schweinfurt 05,VfL Osnabrück,1,2
+2025-10-26,TSG 1899 Hoffenheim II,Erzgebirge Aue,1,1
+2025-10-26,Viktoria Köln,Hansa Rostock,2,4
+2025-10-26,MSV Duisburg,Rot-Weiss Essen,1,1
+2025-10-31,Viktoria Köln,FC Ingolstadt 04,3,1
+2025-11-01,SSV Ulm 1846,VfB Stuttgart II,1,3
+2025-11-01,Erzgebirge Aue,Jahn Regensburg,4,3
+2025-11-01,VfL Osnabrück,MSV Duisburg,0,0
+2025-11-01,TSV Havelse,SV Wehen Wiesbaden,0,2
+2025-11-01,TSV 1860 München,Energie Cottbus,3,0
+2025-11-01,Hansa Rostock,SC Verl,2,2
+2025-11-02,TSG 1899 Hoffenheim II,SV Waldhof Mannheim,2,0
+2025-11-02,Rot-Weiss Essen,1. FC Schweinfurt 05,2,1
+2025-11-02,Alemannia Aachen,1. FC Saarbrücken,2,0
+2025-11-07,MSV Duisburg,SV Waldhof Mannheim,2,1
+2025-11-08,FC Ingolstadt 04,Rot-Weiss Essen,1,2
+2025-11-08,SSV Ulm 1846,Hansa Rostock,0,5
+2025-11-08,Energie Cottbus,VfL Osnabrück,0,1
+2025-11-08,SC Verl,Erzgebirge Aue,1,1
+2025-11-08,1. FC Schweinfurt 05,TSG 1899 Hoffenheim II,2,1
+2025-11-08,1. FC Saarbrücken,TSV Havelse,1,1
+2025-11-09,VfB Stuttgart II,Alemannia Aachen,1,3
+2025-11-09,Jahn Regensburg,TSV 1860 München,4,0
+2025-11-09,SV Wehen Wiesbaden,Viktoria Köln,0,1
+2025-11-21,TSG 1899 Hoffenheim II,MSV Duisburg,4,1
+2025-11-22,SV Waldhof Mannheim,SV Wehen Wiesbaden,1,0
+2025-11-22,Viktoria Köln,SC Verl,1,5
+2025-11-22,Hansa Rostock,1. FC Schweinfurt 05,2,0
+2025-11-22,TSV Havelse,SSV Ulm 1846,2,1
+2025-11-22,Alemannia Aachen,Jahn Regensburg,0,2
+2025-11-22,VfL Osnabrück,FC Ingolstadt 04,1,0
+2025-11-23,TSV 1860 München,1. FC Saarbrücken,2,0
+2025-11-23,Erzgebirge Aue,VfB Stuttgart II,0,0
+2025-11-23,Rot-Weiss Essen,Energie Cottbus,2,3
+2025-11-28,SV Wehen Wiesbaden,Erzgebirge Aue,3,1
+2025-11-29,1. FC Saarbrücken,Rot-Weiss Essen,2,3
+2025-11-29,FC Ingolstadt 04,TSG 1899 Hoffenheim II,3,2
+2025-11-29,SSV Ulm 1846,TSV 1860 München,0,1
+2025-11-29,Energie Cottbus,Viktoria Köln,3,2
+2025-11-29,MSV Duisburg,Alemannia Aachen,3,1
+2025-11-29,1. FC Schweinfurt 05,SV Waldhof Mannheim,2,3
+2025-11-30,Jahn Regensburg,Hansa Rostock,0,3
+2025-11-30,SC Verl,VfL Osnabrück,4,1
+2025-11-30,VfB Stuttgart II,TSV Havelse,2,1
+2025-12-05,Rot-Weiss Essen,VfB Stuttgart II,1,1
+2025-12-06,Viktoria Köln,SSV Ulm 1846,0,1
+2025-12-06,Energie Cottbus,MSV Duisburg,3,2
+2025-12-06,TSV Havelse,SC Verl,2,2
+2025-12-06,VfL Osnabrück,SV Wehen Wiesbaden,0,1
+2025-12-06,TSG 1899 Hoffenheim II,Jahn Regensburg,1,0
+2025-12-06,TSV 1860 München,1. FC Schweinfurt 05,3,1
+2025-12-07,SV Waldhof Mannheim,1. FC Saarbrücken,2,1
+2025-12-07,Hansa Rostock,Alemannia Aachen,2,2
+2025-12-07,Erzgebirge Aue,FC Ingolstadt 04,2,2
+2025-12-12,SSV Ulm 1846,VfL Osnabrück,3,5
+2025-12-13,1. FC Saarbrücken,TSG 1899 Hoffenheim II,2,2
+2025-12-13,FC Ingolstadt 04,TSV 1860 München,1,2
+2025-12-13,VfB Stuttgart II,Hansa Rostock,0,1
+2025-12-13,MSV Duisburg,Erzgebirge Aue,0,0
+2025-12-13,Alemannia Aachen,Viktoria Köln,0,3
+2025-12-13,SC Verl,Rot-Weiss Essen,0,0
+2025-12-14,SV Wehen Wiesbaden,Energie Cottbus,3,1
+2025-12-14,Jahn Regensburg,SV Waldhof Mannheim,3,0
+2025-12-14,1. FC Schweinfurt 05,TSV Havelse,2,3
+2025-12-19,Energie Cottbus,Jahn Regensburg,2,2
+2025-12-20,SV Waldhof Mannheim,FC Ingolstadt 04,2,2
+2025-12-20,Erzgebirge Aue,1. FC Schweinfurt 05,4,0
+2025-12-20,VfL Osnabrück,VfB Stuttgart II,1,2
+2025-12-20,Hansa Rostock,1. FC Saarbrücken,1,1
+2025-12-20,Rot-Weiss Essen,SSV Ulm 1846,3,2
+2025-12-20,TSV 1860 München,SC Verl,0,2
+2025-12-21,TSV Havelse,Alemannia Aachen,1,1
+2025-12-21,TSG 1899 Hoffenheim II,SV Wehen Wiesbaden,3,1
+2025-12-21,Viktoria Köln,MSV Duisburg,0,0
+2026-01-16,Jahn Regensburg,FC Ingolstadt 04,0,3
+2026-01-17,1. FC Saarbrücken,Energie Cottbus,1,1
+2026-01-17,SSV Ulm 1846,SV Wehen Wiesbaden,0,1
+2026-01-17,Hansa Rostock,Erzgebirge Aue,2,1
+2026-01-17,TSV 1860 München,Rot-Weiss Essen,1,1
+2026-01-17,SC Verl,SV Waldhof Mannheim,5,2
+2026-01-17,Alemannia Aachen,VfL Osnabrück,0,3
+2026-01-18,VfB Stuttgart II,MSV Duisburg,0,4
+2026-01-18,1. FC Schweinfurt 05,Viktoria Köln,2,0
+2026-01-18,TSV Havelse,TSG 1899 Hoffenheim II,4,0
+2026-01-23,Viktoria Köln,1. FC Saarbrücken,2,0
+2026-01-24,FC Ingolstadt 04,VfB Stuttgart II,2,1
+2026-01-24,Erzgebirge Aue,SSV Ulm 1846,0,3
+2026-01-24,Energie Cottbus,1. FC Schweinfurt 05,2,1
+2026-01-24,Rot-Weiss Essen,TSV Havelse,4,1
+2026-01-24,TSG 1899 Hoffenheim II,Alemannia Aachen,2,3
+2026-01-24,MSV Duisburg,Jahn Regensburg,2,0
+2026-01-25,SV Waldhof Mannheim,Hansa Rostock,0,4
+2026-01-25,VfL Osnabrück,TSV 1860 München,1,1
+2026-01-25,SV Wehen Wiesbaden,SC Verl,2,1
+2026-01-30,TSV Havelse,Erzgebirge Aue,3,1
+2026-01-31,1. FC Saarbrücken,VfL Osnabrück,0,1
+2026-01-31,Viktoria Köln,SV Waldhof Mannheim,1,3
+2026-01-31,Energie Cottbus,TSG 1899 Hoffenheim II,3,1
+2026-01-31,Hansa Rostock,FC Ingolstadt 04,0,3
+2026-01-31,TSV 1860 München,Alemannia Aachen,2,2
+2026-01-31,1. FC Schweinfurt 05,Jahn Regensburg,0,1
+2026-02-01,SSV Ulm 1846,MSV Duisburg,1,0
+2026-02-01,SC Verl,VfB Stuttgart II,4,0
+2026-02-01,Rot-Weiss Essen,SV Wehen Wiesbaden,1,1
+2026-02-06,SV Waldhof Mannheim,SSV Ulm 1846,2,1
+2026-02-07,FC Ingolstadt 04,Energie Cottbus,0,0
+2026-02-07,Erzgebirge Aue,1. FC Saarbrücken,0,0
+2026-02-07,VfL Osnabrück,TSV Havelse,2,0
+2026-02-07,SV Wehen Wiesbaden,1. FC Schweinfurt 05,2,0
+2026-02-07,Jahn Regensburg,Viktoria Köln,0,0
+2026-02-07,VfB Stuttgart II,TSV 1860 München,2,1
+2026-02-08,TSG 1899 Hoffenheim II,Hansa Rostock,2,2
+2026-02-08,Alemannia Aachen,Rot-Weiss Essen,3,3
+2026-02-08,MSV Duisburg,SC Verl,4,2
+2026-02-13,Viktoria Köln,Erzgebirge Aue,2,2
+2026-02-14,1. FC Saarbrücken,VfB Stuttgart II,2,0
+2026-02-14,Hansa Rostock,VfL Osnabrück,2,2
+2026-02-14,SV Wehen Wiesbaden,MSV Duisburg,6,1
+2026-02-14,TSV Havelse,TSV 1860 München,0,5
+2026-02-14,SC Verl,TSG 1899 Hoffenheim II,3,1
+2026-02-14,Rot-Weiss Essen,Jahn Regensburg,3,2
+2026-02-15,Energie Cottbus,SV Waldhof Mannheim,1,1
+2026-02-15,SSV Ulm 1846,Alemannia Aachen,1,3
+2026-02-15,1. FC Schweinfurt 05,FC Ingolstadt 04,1,1
+2026-02-20,VfB Stuttgart II,SV Waldhof Mannheim,3,1
+2026-02-21,FC Ingolstadt 04,TSV Havelse,3,2
+2026-02-21,VfL Osnabrück,Rot-Weiss Essen,3,0
+2026-02-21,Jahn Regensburg,SV Wehen Wiesbaden,2,1
+2026-02-21,MSV Duisburg,1. FC Schweinfurt 05,3,1
+2026-02-21,Alemannia Aachen,SC Verl,3,1
+2026-02-21,SSV Ulm 1846,1. FC Saarbrücken,1,1
+2026-02-22,TSV 1860 München,Hansa Rostock,1,0
+2026-02-22,Erzgebirge Aue,Energie Cottbus,1,2
+2026-02-22,TSG 1899 Hoffenheim II,Viktoria Köln,1,3
+2026-02-27,TSG 1899 Hoffenheim II,TSV 1860 München,1,2
+2026-02-28,Viktoria Köln,VfB Stuttgart II,2,0
+2026-02-28,Erzgebirge Aue,VfL Osnabrück,1,3
+2026-02-28,Hansa Rostock,Rot-Weiss Essen,3,2
+2026-02-28,SV Wehen Wiesbaden,FC Ingolstadt 04,2,1
+2026-02-28,Jahn Regensburg,SSV Ulm 1846,1,1
+2026-02-28,Energie Cottbus,SC Verl,0,0
+2026-03-01,SV Waldhof Mannheim,Alemannia Aachen,2,1
+2026-03-01,MSV Duisburg,TSV Havelse,1,1
+2026-03-01,1. FC Schweinfurt 05,1. FC Saarbrücken,2,2
+2026-03-03,VfB Stuttgart II,Energie Cottbus,1,2
+2026-03-03,SSV Ulm 1846,TSG 1899 Hoffenheim II,1,3
+2026-03-03,VfL Osnabrück,Viktoria Köln,2,0
+2026-03-03,TSV 1860 München,Erzgebirge Aue,2,1
+2026-03-03,SC Verl,Jahn Regensburg,1,2
+2026-03-04,1. FC Saarbrücken,SV Wehen Wiesbaden,2,0
+2026-03-04,FC Ingolstadt 04,MSV Duisburg,0,0
+2026-03-04,TSV Havelse,Hansa Rostock,1,3
+2026-03-04,Alemannia Aachen,1. FC Schweinfurt 05,1,0
+2026-03-04,Rot-Weiss Essen,SV Waldhof Mannheim,1,0
+2026-03-06,Viktoria Köln,TSV 1860 München,0,1
+2026-03-07,Erzgebirge Aue,Alemannia Aachen,1,3
+2026-03-07,Energie Cottbus,Hansa Rostock,0,0
+2026-03-07,SV Wehen Wiesbaden,VfB Stuttgart II,2,1
+2026-03-07,TSG 1899 Hoffenheim II,Rot-Weiss Essen,2,4
+2026-03-07,1. FC Schweinfurt 05,SSV Ulm 1846,3,2
+2026-03-07,Jahn Regensburg,VfL Osnabrück,0,2
+2026-03-08,SV Waldhof Mannheim,TSV Havelse,3,1
+2026-03-08,MSV Duisburg,1. FC Saarbrücken,4,2
+2026-03-08,FC Ingolstadt 04,SC Verl,1,2
+2026-03-13,Alemannia Aachen,Energie Cottbus,4,1
+2026-03-14,1. FC Saarbrücken,Jahn Regensburg,1,1
+2026-03-14,VfL Osnabrück,SV Waldhof Mannheim,4,1
+2026-03-14,Hansa Rostock,MSV Duisburg,5,1
+2026-03-14,TSV Havelse,Viktoria Köln,3,2
+2026-03-14,Rot-Weiss Essen,Erzgebirge Aue,4,2
+2026-03-14,TSV 1860 München,SV Wehen Wiesbaden,0,0
+2026-03-15,VfB Stuttgart II,TSG 1899 Hoffenheim II,1,0
+2026-03-15,SC Verl,1. FC Schweinfurt 05,4,0
+2026-03-15,SSV Ulm 1846,FC Ingolstadt 04,1,3
+2026-03-20,SV Wehen Wiesbaden,Hansa Rostock,0,1
+2026-03-21,SV Waldhof Mannheim,Erzgebirge Aue,2,1
+2026-03-21,FC Ingolstadt 04,Alemannia Aachen,1,2
+2026-03-21,Energie Cottbus,SSV Ulm 1846,1,1
+2026-03-21,Jahn Regensburg,TSV Havelse,5,2
+2026-03-21,1. FC Schweinfurt 05,VfB Stuttgart II,3,1
+2026-03-21,SC Verl,1. FC Saarbrücken,3,0
+2026-03-22,TSG 1899 Hoffenheim II,VfL Osnabrück,0,1
+2026-03-22,MSV Duisburg,TSV 1860 München,2,1
+2026-03-22,Viktoria Köln,Rot-Weiss Essen,1,2
+2026-04-04,VfL Osnabrück,1. FC Schweinfurt 05,4,0
+2026-04-04,Hansa Rostock,Viktoria Köln,2,3
+2026-04-04,TSV Havelse,Energie Cottbus,0,3
+2026-04-04,TSV 1860 München,SV Waldhof Mannheim,1,1
+2026-04-04,Erzgebirge Aue,TSG 1899 Hoffenheim II,3,5
+2026-04-04,VfB Stuttgart II,Jahn Regensburg,3,1
+2026-04-04,Rot-Weiss Essen,MSV Duisburg,1,0
+2026-04-05,SSV Ulm 1846,SC Verl,1,0
+2026-04-05,1. FC Saarbrücken,FC Ingolstadt 04,1,0
+2026-04-05,Alemannia Aachen,SV Wehen Wiesbaden,3,0
+2026-04-07,SV Waldhof Mannheim,TSG 1899 Hoffenheim II,1,1
+2026-04-07,Energie Cottbus,TSV 1860 München,3,0
+2026-04-07,Jahn Regensburg,Erzgebirge Aue,1,0
+2026-04-07,MSV Duisburg,VfL Osnabrück,1,0
+2026-04-07,1. FC Schweinfurt 05,Rot-Weiss Essen,1,3
+2026-04-08,1. FC Saarbrücken,Alemannia Aachen,1,1
+2026-04-08,FC Ingolstadt 04,Viktoria Köln,1,2
+2026-04-08,VfB Stuttgart II,SSV Ulm 1846,1,1
+2026-04-08,SV Wehen Wiesbaden,TSV Havelse,1,4
+2026-04-08,SC Verl,Hansa Rostock,1,2
+2026-04-10,TSG 1899 Hoffenheim II,1. FC Schweinfurt 05,1,1
+2026-04-11,SV Waldhof Mannheim,MSV Duisburg,1,4
+2026-04-11,Viktoria Köln,SV Wehen Wiesbaden,2,1
+2026-04-11,TSV Havelse,1. FC Saarbrücken,2,0
+2026-04-11,Alemannia Aachen,VfB Stuttgart II,3,1
+2026-04-11,Rot-Weiss Essen,FC Ingolstadt 04,3,1
+2026-04-11,Hansa Rostock,SSV Ulm 1846,5,1
+2026-04-12,VfL Osnabrück,Energie Cottbus,1,0
+2026-04-12,Erzgebirge Aue,SC Verl,1,1
+2026-04-12,TSV 1860 München,Jahn Regensburg,2,2
+2026-04-17,Jahn Regensburg,Alemannia Aachen,1,3
+2026-04-18,1. FC Saarbrücken,TSV 1860 München,0,0
+2026-04-18,FC Ingolstadt 04,VfL Osnabrück,0,1
+2026-04-18,MSV Duisburg,TSG 1899 Hoffenheim II,3,1
+2026-04-18,SC Verl,Viktoria Köln,2,0
+2026-04-18,1. FC Schweinfurt 05,Hansa Rostock,0,0
+2026-04-18,SSV Ulm 1846,TSV Havelse,2,1
+2026-04-19,Energie Cottbus,Rot-Weiss Essen,5,3
+2026-04-19,VfB Stuttgart II,Erzgebirge Aue,2,2
+2026-04-19,SV Wehen Wiesbaden,SV Waldhof Mannheim,3,3
+2026-04-24,Alemannia Aachen,MSV Duisburg,3,1
+2026-04-25,Erzgebirge Aue,SV Wehen Wiesbaden,2,2
+2026-04-25,VfL Osnabrück,SC Verl,2,1
+2026-04-25,Hansa Rostock,Jahn Regensburg,2,5
+2026-04-25,TSV 1860 München,SSV Ulm 1846,3,2
+2026-04-25,TSG 1899 Hoffenheim II,FC Ingolstadt 04,0,3
+2026-04-25,SV Waldhof Mannheim,1. FC Schweinfurt 05,2,2
+2026-04-26,Viktoria Köln,Energie Cottbus,0,2
+2026-04-26,Rot-Weiss Essen,1. FC Saarbrücken,1,2
+2026-04-26,TSV Havelse,VfB Stuttgart II,3,2
+2026-05-02,1. FC Saarbrücken,SV Waldhof Mannheim,2,0
+2026-05-02,Jahn Regensburg,TSG 1899 Hoffenheim II,2,1
+2026-05-02,Alemannia Aachen,Hansa Rostock,1,1
+2026-05-02,SC Verl,TSV Havelse,4,0
+2026-05-02,1. FC Schweinfurt 05,TSV 1860 München,1,1
+2026-05-02,VfB Stuttgart II,Rot-Weiss Essen,6,1
+2026-05-02,SSV Ulm 1846,Viktoria Köln,0,2
+2026-05-03,MSV Duisburg,Energie Cottbus,2,1
+2026-05-03,SV Wehen Wiesbaden,VfL Osnabrück,2,3
+2026-05-03,FC Ingolstadt 04,Erzgebirge Aue,3,5
+2026-05-08,Erzgebirge Aue,MSV Duisburg,0,0
+2026-05-09,VfL Osnabrück,SSV Ulm 1846,1,1
+2026-05-09,Energie Cottbus,SV Wehen Wiesbaden,2,1
+2026-05-09,Hansa Rostock,VfB Stuttgart II,5,3
+2026-05-09,Rot-Weiss Essen,SC Verl,1,0
+2026-05-09,TSV 1860 München,FC Ingolstadt 04,1,2
+2026-05-09,SV Waldhof Mannheim,Jahn Regensburg,1,0
+2026-05-10,TSV Havelse,1. FC Schweinfurt 05,3,2
+2026-05-10,Viktoria Köln,Alemannia Aachen,0,3
+2026-05-10,TSG 1899 Hoffenheim II,1. FC Saarbrücken,3,2
+2026-05-16,1. FC Saarbrücken,Hansa Rostock,3,4
+2026-05-16,FC Ingolstadt 04,SV Waldhof Mannheim,5,1
+2026-05-16,VfB Stuttgart II,VfL Osnabrück,3,4
+2026-05-16,SSV Ulm 1846,Rot-Weiss Essen,2,3
+2026-05-16,SV Wehen Wiesbaden,TSG 1899 Hoffenheim II,2,0
+2026-05-16,Jahn Regensburg,Energie Cottbus,0,1
+2026-05-16,MSV Duisburg,Viktoria Köln,1,1
+2026-05-16,Alemannia Aachen,TSV Havelse,6,1
+2026-05-16,SC Verl,TSV 1860 München,3,0
+2026-05-16,1. FC Schweinfurt 05,Erzgebirge Aue,2,4
 2026-08-07,SV Waldhof Mannheim,Fortuna Düsseldorf,2,1
 2026-08-08,FC Ingolstadt 04,Würzburger Kickers,2,2
 2026-08-08,MSV Duisburg,SV Meppen,3,0
