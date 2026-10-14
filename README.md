@@ -42,7 +42,12 @@ Desde el navegador: la clave se pega en la página y vive solo en `localStorage`
 
 ## Picks sugeridos y armador de parlays
 - Resumen: tarjeta "Picks sugeridos" por partido (pick de valor si hay EV>0, prob. ≥38% y sin alerta de error del modelo; si no, pick de probabilidad 60–74% con cuota justa 1.35–1.85; y un "fijo para parlay" de 75–92%).
-- Destacados → "Armador de Parlays": escanea los partidos del día (todas las ligas, que no hayan empezado) y arma Seguro, Equilibrado y de Valor. Una selección por partido; probabilidad = producto de las individuales. Mi parlay se guarda en `localStorage`.
+- Destacados → "Jugadas del día" (escanea los partidos del día elegido, todas las ligas, que no hayan empezado; una selección por partido):
+  - 🎯 **Pick del Día**: la selección con mayor valor esperado (EV+) y probabilidad real mayor de 55%, sin alerta de "probable error del modelo" (diferencia de 8+ puntos contra la cuota). Muestra cuota justa, cuota de la casa editable, EV en verde/rojo y stake de Kelly en lempiras. Si no hay, lo dice y deja escribir la cuota de tu casa en los mercados más probables.
+  - ⚖️ **Combinada del Día**: 2–3 selecciones (partidos distintos) con probabilidad individual de 62% a 80%; probabilidad combinada, cuota justa combinada, campo para la cuota real, EV y stake.
+  - 🚀 **Parlay Soñador**: solo con "falso favorito" (el mercado le da 4 a menos de 8 puntos más que el modelo puro; se apuesta la doble oportunidad contra él) o "tendencia de goles oculta" (los dos equipos 7+ de 10 y Poisson 8+ puntos por debajo). Máximo 4 selecciones, cada una 40%+, cuota justa de 5 o de 8 en adelante (tope 14–16). La probabilidad usa la menor entre modelo y mercado; el stake nunca pasa de 1% del bankroll y es L 0 sin valor.
+  - Las cuotas que escribes (en el partido o en Destacados) se guardan por partido en `localStorage` (`scoutpicks.myodds.v1`) para que el escaneo las vea.
+- Destacados → "Mi parlay": constructor manual (se guarda en `localStorage`).
 
 ## Bajas y Sanciones Clave (manual y local)
 Reemplaza el panel de lesionados y el ajuste de −7%. Tres botones por equipo (estrella ofensiva −15% goles propios; mediocampo −8% propios y +4% rival; defensa/portero +12% rival). Se acumulan. En ligas con Poisson mueven los goles esperados; en la Champions sin cuotas mueven el Elo (−35, −20, −25). Todo se calcula en el navegador, sin ninguna fuente externa. No están validados con partidos pasados.
