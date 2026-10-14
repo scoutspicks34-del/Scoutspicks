@@ -2632,6 +2632,49 @@ function pickOfDay(legs){
     .filter(c=>{if(seen.has(c.match))return false; seen.add(c.match); return true;}).slice(0,4);
   return {best:good[0]||null,big:withO.filter(c=>c.ev>0&&c.flag==="big").length,cand:cand,nOdds:withO.length};
 }
+/* ⚡ Pick Solitario Estadístico: SIEMPRE devuelve 1 pick (si hay partidos), aunque ningún mercado tenga EV+.
+   Rango: probabilidad real de 58% a 76% (cuota justa de 1.32 a 1.72). Con cuotas cargadas gana el de EV menos negativo; sin cuotas, el de mayor respaldo de Poisson/Elo con cuota justa de 1.35 a 1.70. */
+const SP_KEYS=new Set(["1","2","o:goals:2.5","u:goals:2.5","btts:y","btts:n"]);
+function spOk(r){return SP_KEYS.has(r.key)||(r.sec==="Resultado"&&/^Doble oportunidad/.test(r.label));}
+function statPick(items){
+  const all=[]; items.forEach(it=>candsOf(it.fr,it.f,it.match,spOk).forEach(c=>all.push(c)));
+  if(!all.length)return null;
+  const ok=all.filter(c=>c.flag!=="big"), base=ok.length?ok:all;          // se evitan los que traen alerta de "probable error del modelo"
+  const dist=c=>c.p<0.58?0.58-c.p:c.p>0.76?c.p-0.76:0, inR=base.filter(c=>dist(c)===0);
+  const sup=c=>Math.min(c.p,c.pMod);
+  let best, mode;
+  if(inR.length){
+    const withO=inR.filter(c=>c.v);
+    if(withO.length){mode="ev"; best=withO.slice().sort((a,b)=>b.ev-a.ev||sup(b)-sup(a))[0];}
+    else{mode="model"; const core=inR.filter(c=>c.fair>=1.35&&c.fair<=1.70); best=(core.length?core:inR).slice().sort((a,b)=>sup(b)-sup(a)||b.p-a.p)[0];}
+  }else{mode="near"; best=base.slice().sort((a,b)=>dist(a)-dist(b)||((b.ev!==null?b.ev:-1)-(a.ev!==null?a.ev:-1))||b.p-a.p)[0];}
+  return {c:best,mode:mode,n:inR.length};
+}
+function statStake(p,v){
+  const fix=()=>bank.v>0?`<b>2% del bankroll (${lps(bank.v*0.02)})</b>`:`<b>2% del bankroll</b>`;
+  const fixNote=bank.v>0?"":" Escribe tu bankroll arriba para verlo en lempiras.";
+  if(v>1){
+    const ev=p*v-1;
+    if(ev>1e-12){const st=stakeHtml(p,v); return {cls:st.cls,html:"Con esa cuota pasa a EV+ · "+st.html};}
+    if(ev>=-0.06)return {cls:"stk yes",html:`Stake estadístico fijo sugerido: ${fix()}<small>Sin valor esperado positivo: se juega bajo tu propio criterio, no es una recomendación de valor.${fixNote}</small>`};
+    return {cls:"stk no",html:`Stake sugerido: <b>L 0 (No apostar)</b><small>Tu casa paga demasiado menos que la cuota justa (EV ${(ev*100).toFixed(1)}%). Busca otra casa o espera una cuota de ${f2(1/p)} o más.</small>`};
+  }
+  return {cls:"stk yes",html:`Stake estadístico fijo sugerido: ${fix()}<small>Escribe la cuota de tu casa: si da valor positivo, se calcula con Kelly. Sin valor, es una apuesta bajo tu criterio.${fixNote}</small>`};
+}
+function statHtml(P,sc){
+  const S=P.stat;
+  if(!S)return `<div class="pk" style="margin-top:10px;border-color:var(--vis)"><div class="pkh">⚡ PICK SOLITARIO ESTADÍSTICO (Sugerencia del Modelo sin EV+)</div><div class="pkn" style="margin-top:6px">No hay mercados disponibles para sugerir.</div></div>`;
+  const c=S.c, eng=DATA.leagues[c.fx.lg].kind==="elo"?"Elo y Poisson":"Poisson";
+  const same=P.best&&P.best.id===c.id&&P.best.match===c.match;
+  let why;
+  if(S.mode==="ev")why=`Es el mercado en el rango de cuota solitaria (probabilidad de 58% a 76%) que está más cerca de tener valor · EV actual: <b>${(c.ev>0?"+":"")+(c.ev*100).toFixed(1)}%</b> con la cuota ${f2(c.v)}.`;
+  else if(S.mode==="model")why=`Mayor respaldo de ${eng} en rango de cuota solitaria (cuota justa de 1.35 a 1.70) entre ${S.n} ${S.n===1?"mercado":"mercados"} · sin cuotas cargadas, todavía no se puede medir el EV.`;
+  else why=`Ningún mercado cae en el rango de 58% a 76%; este es el más cercano a ese rango${c.v?` · EV actual: <b>${(c.ev>0?"+":"")+(c.ev*100).toFixed(1)}%</b>`:""}.`;
+  why+=` ${c.hasMkt?"La probabilidad parte de las cuotas del mercado.":"Probabilidad del modelo ("+eng+")."}${same?" Coincide con el Pick de arriba.":""}`;
+  return `<div class="pk" style="margin-top:10px;border-color:var(--vis)"><div class="pkh">⚡ PICK SOLITARIO ESTADÍSTICO (Sugerencia del Modelo sin EV+)</div><div class="pkm">${esc(c.label)}</div>
+    <div class="pkn">${whereTxt(c)}<br>Probabilidad real del modelo <b>${pct(c.p)}</b> · cuota justa <b>${f2(c.fair)}</b>${c.v?` · cuota actual del mercado <b>${f2(c.v)}</b>`:` · sin cuota cargada`}<br><span class="sub">${why}</span></div>
+    ${hiRow(c,sc.pfx,true)}</div>`;
+}
 /* ⚖️ Combinada del Día: 2–3 selecciones de partidos distintos con probabilidad individual entre 62% y 80% */
 function comboOfDay(items){
   const cmp=(x,y)=>{const a=x.ev!==null,b=y.ev!==null; if(a!==b)return a?-1:1; return a?y.ev-x.ev:y.p-x.p;};
@@ -2740,16 +2783,18 @@ function dreamStake(p,v,cap){                 // Kelly fraccional, pero nunca m�
 /* --- cuota de la casa editable en una selección suelta --- */
 let hiMap={}, hiN=0;
 function scopeReset(pfx){[hiMap,parlSets,parlDream].forEach(o=>Object.keys(o).forEach(k=>{if(k.startsWith(pfx))delete o[k];}));}
-function hiRow(c,pfx){
-  const i=pfx+(hiN++); hiMap[i]={key:c.fx.lg+"|"+c.fx.h+"|"+c.fx.a,rk:c.id,p:c.p};
+function hiRow(c,pfx,stat){
+  const i=pfx+(hiN++); hiMap[i]={key:c.fx.lg+"|"+c.fx.h+"|"+c.fx.a,rk:c.id,p:c.p,stat:!!stat};
   return `<div class="pcalc"><span class="mf">Cuota de la casa${c.v?"":" (escríbela)"}</span><input inputmode="decimal" data-hi="${i}" placeholder="Cuota" value="${c.v?String(c.v):""}" aria-label="Cuota de la casa para ${esc(c.label)}"><span class="ev" id="hiev_${i}"></span></div><div id="hist_${i}"></div>`;
 }
 function hiUpdate(i){
   const m=hiMap[i], el=document.querySelector('[data-hi="'+i+'"]'), e=$("hiev_"+i), s=$("hist_"+i); if(!m||!el||!e||!s)return;
   const v=parseFloat(el.value.replace(",","."));
-  if(!(v>1)){e.textContent="";e.className="ev";s.innerHTML=`<div class="sub" style="margin-top:6px">Solo tiene valor si tu casa paga más de ${f2(1/m.p)}.</div>`;return;}
+  if(!(v>1)){e.textContent="";e.className="ev";
+    s.innerHTML=m.stat?`<div class="sub" style="margin-top:6px">Tiene valor solo si tu casa paga más de ${f2(1/m.p)}.</div><div class="${statStake(m.p,0).cls}">${statStake(m.p,0).html}</div>`
+      :`<div class="sub" style="margin-top:6px">Solo tiene valor si tu casa paga más de ${f2(1/m.p)}.</div>`;return;}
   const ev=m.p*v-1; e.className="ev "+(ev>0?"pos":"neg"); e.textContent=(ev>0?"+":"")+(ev*100).toFixed(1)+"%";
-  const st=stakeHtml(m.p,v); s.innerHTML=`<div class="${st.cls}">${st.html}</div>`;
+  const st=m.stat?statStake(m.p,v):stakeHtml(m.p,v); s.innerHTML=`<div class="${st.cls}">${st.html}</div>`;
 }
 function whereTxt(c){return esc(lgName(c.fx.lg))+" · "+esc(c.match)+" · "+esc(dtxt(c.fx.date));}
 
@@ -2792,12 +2837,12 @@ function pickHtml(P,sc){
     html=`<div class="pk val"><div class="pkh">${sc.pickT}</div><div class="pkm">${esc(c.label)}</div><div class="pkn">${whereTxt(c)}<br>
       Probabilidad real <b>${pct(c.p)}</b> · cuota justa <b>${f2(c.fair)}</b><br><span class="sub">${c.hasMkt?"Probabilidad calculada a partir de las cuotas del mercado.":"Probabilidad del modelo (Elo y Poisson)."}</span></div>
       ${hiRow(c,sc.pfx)}${c.flag==="fav"?`<div class="flag" style="margin-top:6px">Ojo: el modelo subestima favoritos.</div>`:""}${useBtn(sc.pfx+"pick",[legOfC(c)]).replace("Usar en mi parlay","+ Agregar a mi Parlay")}</div>`;
-    return html;
+    return html+statHtml(P,sc);
   }
   html=`<div class="pk"><div class="pkh">${sc.pickT}</div><div class="pkn" style="margin-top:6px"><b>${sc.H==="Hoy"?"Hoy no hay pick.":"No hay pick en esta jornada."}</b> Ningún mercado cumple a la vez valor esperado positivo y probabilidad real mayor de 55%${P.big?` (hay ${P.big} con valor positivo pero con alerta de "probable error del modelo", y se descartan a propósito)`:""}.${P.nOdds?"":" Además no hay cuotas cargadas: carga las del partido o escribe las de tu casa."} No forzar una apuesta también es una decisión.</div>`;
   if(P.cand.length)html+=`<div class="sub" style="margin-top:10px">Mercados más probables ${sc.h==="hoy"?"de hoy":"de la jornada"}. Escribe la cuota de tu casa: si paga más que la cuota justa, pasa a ser el pick.</div>`+
     P.cand.map(c=>`<div class="pcand"><div class="pm">${whereTxt(c)}</div><div class="pl">${esc(c.label)} · <b>${pct(c.p)}</b> · cuota justa <b>${f2(c.fair)}</b></div>${hiRow(c,sc.pfx)}</div>`).join("");
-  return html+"</div>";
+  return html+"</div>"+statHtml(P,sc);
 }
 function comboHtml(C,sc){
   if(!C.legs)return `<div class="box parl"><h3>${sc.comboT}</h3><div class="sub">${sc.H==="Hoy"?"Hoy no hay":"En esta jornada no hay"} 2 selecciones de partidos distintos con probabilidad de 62% a 80% (sin alerta de error del modelo)${C.n===1?": solo hay 1":""}.</div></div>`;
@@ -2829,7 +2874,7 @@ function renderParl(){
     :`No hay partidos pendientes el ${esc(dd)} en ninguna liga. Cambia el día arriba.`;
   if(!sc.items.length){$("parlPlay").innerHTML="";}
   else{
-    const P=pickOfDay(sc.legs), C=comboOfDay(sc.items), D=dreamPool(sc.items), S=dreamSets(D.pool);
+    const P=pickOfDay(sc.legs), C=comboOfDay(sc.items), D=dreamPool(sc.items), S=dreamSets(D.pool); P.stat=statPick(sc.items);
     $("parlPlay").innerHTML=pickHtml(P,DSC)+comboHtml(C,DSC)+dreamHtml(D,S,DSC);
   }
   renderMine(); showFeat();
@@ -2884,6 +2929,7 @@ function renderLgPanel(){
   if(!sc.items.length){$("lgBody").innerHTML="";return;}
   const P=pickOfDay(sc.legs), C=comboOfDay(sc.items), D=dreamPool(sc.items), S=dreamSets(D.pool), nO=sc.items.filter(i=>i.legs.some(c=>c.v)).length;
   $("lgSub").innerHTML=`Calculado solo con los <b>${sc.items.length}</b> ${sc.items.length===1?"partido":"partidos"} de ${esc(DATA.leagues[league].name)} de este día que aún no empiezan. ${nO?`Hay cuotas cargadas en ${nO}.`:"No hay cuotas cargadas: sin cuotas no se mide el valor (escríbelas en cada selección o cárgalas dentro del partido)."} Cambia de día o de liga arriba y se recalcula.`;
+  P.stat=statPick(sc.items);
   $("lgPlay").innerHTML=pickHtml(P,LSC)+comboHtml(C,LSC)+dreamHtml(D,S,LSC);
   Object.keys(hiMap).forEach(k=>{if(k.startsWith("L_"))hiUpdate(k);});
   document.querySelectorAll("#lgPlay [data-parl]").forEach(el=>{const id=el.dataset.parl, legs=parlSets[id]; if(legs)parlUpdate(id,legs,parlDream[id]||0);});
