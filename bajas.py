@@ -24,6 +24,7 @@ SLUG = {
     "premier": "england-premier-league", "bundesliga": "germany-bundesliga", "laliga": "spain-la-liga",
     "ucl": "uefa-champions-league", "eredivisie": "netherlands-eredivisie", "noruega": "norway-eliteserien",
     "mls": "usa-mls", "ligamx": "mexico-liga-mx",
+    "uel": "uefa-europa-league", "liga3": "germany-3-liga",   # si la fuente no tiene la página, la comprobación del título la descarta sin afectar a las demás
 }
 UA = "Mozilla/5.0 (compatible; PicksFreshBot/1.0; +https://github.com/scoutspicks34-del/Scoutspicks)"
 

@@ -16,6 +16,7 @@ LEAGUES = {
     "eredivisie": dict(name="Eredivisie (Holanda)", code="N1", tbl="euro", new=True),
     "noruega": dict(name="Eliteserien (Noruega)", code="NOR", src="fdnew", cc="NOR", tbl="cal", new=True),
     "arabia": dict(name="Liga de Arabia", code="KSA", src="espn", slug="ksa.1", tbl="euro", new=True),
+    "liga3": dict(name="3. Liga (Alemania)", code="GER3", src="oldb", slug="bl3", tbl="euro", new=True),   # solo goles; datos de OpenLigaDB (ESPN no la tiene)
     "mls": dict(name="MLS (EE. UU.)", code="USA", src="fdnew", cc="USA", tbl="cal", new=True),
     "ligamx": dict(name="Liga MX (México)", code="MEX", src="fdnew", cc="MEX", tbl="split", new=True),
 }
@@ -97,12 +98,23 @@ def espn_hist(key, v, today, evs=None):
     return [df]
 
 
+def oldb_hist(v, today):
+    """3. Liga: marcadores finales de OpenLigaDB de la temporada en curso y las dos anteriores (si falla, espn_hist usa la copia guardada)."""
+    y0 = today.year if today.month >= 7 else today.year - 1
+    rows = []
+    for y in range(y0 - 2, y0 + 1):
+        rows += [r[:5] for r in parse_openliga(_get_json("OpenLigaDB", f"https://api.openligadb.de/getmatchdata/{v['slug']}/{y}"))]
+    return rows
+
+
 def load_league(key, v, seasons, today):
     src = v.get("src", "fd")
     if src == "fd":
         return prepare(manual_frames(v["code"]) + fetch_frames(v["code"], seasons), cal=v.get("tbl") == "cal")
     if src == "fdnew":
         return prepare(manual_frames(v["code"]) + fetch_new(v, today), cal=v.get("tbl") == "cal")
+    if src == "oldb":
+        return prepare(manual_frames(v["code"]) + espn_hist(key, v, today, evs=oldb_hist(v, today)))
     return prepare(manual_frames(v["code"]) + espn_hist(key, v, today))
 
 
@@ -370,7 +382,7 @@ def of_extra(key, df, today, text=None):
 # Fuentes gratuitas que publican el marcador el mismo día (solo goles); football-data.co.uk trae después las estadísticas completas.
 EXTRA_N, EXTRA_ERR, EXTRA_BAD = {}, [], []
 ESPN_LG = {"bundesliga": "ger.1", "premier": "eng.1", "laliga": "esp.1", "ucl": "uefa.champions", "eredivisie": "ned.1", "noruega": "nor.1",
-           "arabia": "ksa.1", "mls": "usa.1", "ligamx": "mex.1"}
+           "arabia": "ksa.1", "mls": "usa.1", "ligamx": "mex.1", "uel": "uefa.europa"}
 OLDB_LG = {"bundesliga": "bl1"}
 FDORG_LG = {"bundesliga": "BL1", "premier": "PL", "laliga": "PD", "ucl": "CL", "eredivisie": "DED"}
 UCL_STAGE = {"league-phase": "Fase de liga", "playoffs": "Play-offs", "knockout-round-playoffs": "Play-offs",
@@ -547,6 +559,8 @@ def recent_results(params, uclh, today, days=3):
         if key == "ucl":
             rows = [(r[0], r[1], r[2], r[3], r[4]) for r in uclh if r[0] >= cut]
             names = None
+        elif P.get("kind") == "elo":
+            continue                                # Europa League: sus resultados recientes salen de uel_done()
         else:
             ht = P["hteams"]
             rows = [(r[0], ht[r[1]], ht[r[2]], r[3], r[4]) for r in P["hm"] if r[0] >= cut]
@@ -650,7 +664,7 @@ def parse_espn_fx(js):
     return out
 
 
-def extra_fixtures(params, today, nl_text=None, espn_days=None):
+def extra_fixtures(params, today, nl_text=None, espn_days=None, oldb_js=None):
     """Próximos partidos de las ligas nuevas: new_league_fixtures.csv de football-data (con cuotas 1X2) y, si falta algo, el scoreboard de ESPN."""
     from zoneinfo import ZoneInfo
     uk, hn = ZoneInfo("Europe/London"), ZoneInfo("America/Tegucigalpa")
@@ -706,8 +720,21 @@ def extra_fixtures(params, today, nl_text=None, espn_days=None):
             add(key, loc, str(row.get("Home")), str(row.get("Away")), odds)
     except Exception as e:  # noqa: BLE001
         log(f"  new_league_fixtures.csv: {str(e)[:100]}")
-    # ESPN: completa lo que falte y es la única fuente de Arabia
+    # OpenLigaDB: única fuente de la 3. Liga (partidos sin terminar de los próximos 7 días)
     for key, v in LEAGUES.items():
+        if v.get("src") != "oldb" or key not in params:
+            continue
+        y0 = today.year if today.month >= 7 else today.year - 1
+        for m in (oldb_js if oldb_js is not None else _get_json("OpenLigaDB", f"https://api.openligadb.de/getmatchdata/{v['slug']}/{y0}")) or []:
+            if m.get("matchIsFinished"):
+                continue
+            try:
+                d = dt.datetime.strptime(str(m.get("matchDateTimeUTC") or "")[:16], "%Y-%m-%dT%H:%M").replace(tzinfo=dt.timezone.utc)
+            except ValueError:
+                continue
+            add(key, d.astimezone(hn), (m.get("team1") or {}).get("teamName", ""), (m.get("team2") or {}).get("teamName", ""), {})
+    # ESPN: completa lo que falte y es la única fuente de Arabia (y de la Europa League)
+    for key, v in list(LEAGUES.items()) + [("uel", {"new": True})]:
         if not v.get("new") or key not in params or key not in ESPN_LG:
             continue
         for i in range(0, 8):
@@ -747,13 +774,14 @@ def market_lambdas(odds, start):
 
 UCL_EXTRA = {"atletico madrid": "Ath Madrid", "borussia dortmund": "Dortmund", "rb leipzig": "RB Leipzig",
              "bayern munich": "Bayern Munich", "real betis": "Betis", "manchester city": "Man City",
-             "manchester united": "Man United"}
+             "manchester united": "Man United", "afc bournemouth": "Bournemouth", "tsg hoffenheim": "Hoffenheim", "bayer leverkusen": "Leverkusen",
+             "celta vigo": "Celta", "real sociedad": "Sociedad", "nec nijmegen": "Nijmegen", "az alkmaar": "AZ Alkmaar"}
 
 
-def ucl_domestic(params):
-    """Para cada club de Champions, en qué liga local tenemos su historial (solo Bundesliga, Premier y La Liga)."""
+def ucl_domestic(params, teams=None):
+    """Para cada club de Champions (o Europa League), en qué liga local tenemos su historial (Bundesliga, Premier, La Liga y Eredivisie)."""
     out = {}
-    for t in UCL_TEAMS:
+    for t in (teams or UCL_TEAMS):
         n = norm(t)
         for key in LEAGUES:
             teams = params.get(key, {}).get("hteams", [])
@@ -821,26 +849,39 @@ STATIC_ELO = {
 }
 
 
+_CLUBELO = {}
+
+
+def clubelo_text(today):
+    """CSV de clubelo.com del día (se pide una sola vez por ejecución; None si no responde)."""
+    if "t" in _CLUBELO:
+        return _CLUBELO["t"]
+    import time
+    text = None
+    for back in (0, 1, 3):
+        day = (today - dt.timedelta(days=back)).isoformat()
+        for url in (f"http://api.clubelo.com/{day}", f"https://api.clubelo.com/{day}"):
+            for intento in range(2):
+                try:
+                    r = requests.get(url, timeout=45, headers={"User-Agent": "Mozilla/5.0"})
+                    r.raise_for_status()
+                    text = r.text
+                    break
+                except Exception as e:  # noqa: BLE001
+                    log(f"  clubelo {url}: {str(e)[:120]}")
+                    time.sleep(4)
+            if text:
+                break
+        if text:
+            break
+    _CLUBELO["t"] = text
+    return text
+
+
 def ucl_params(today, text=None):
     """Elo de cada club (clubelo.com) para la Champions League."""
     if text is None:
-        import time
-        for back in (0, 1, 3):
-            day = (today - dt.timedelta(days=back)).isoformat()
-            for url in (f"http://api.clubelo.com/{day}", f"https://api.clubelo.com/{day}"):
-                for intento in range(2):
-                    try:
-                        r = requests.get(url, timeout=45, headers={"User-Agent": "Mozilla/5.0"})
-                        r.raise_for_status()
-                        text = r.text
-                        break
-                    except Exception as e:  # noqa: BLE001
-                        log(f"  clubelo {url}: {str(e)[:120]}")
-                        time.sleep(4)
-                if text:
-                    break
-            if text:
-                break
+        text = clubelo_text(today)
     if not text:
         log("  clubelo no responde: se usa el Elo guardado del " + STATIC_ELO_DATE)
         elo = {k: float(v) for k, v in STATIC_ELO.items()}
@@ -884,6 +925,101 @@ def ucl_fixtures(params, today):
         if not (today <= day <= today + dt.timedelta(days=10)) or loc < now - dt.timedelta(hours=2):
             continue
         out.append({"id": f"ucl-{d}-{h}", "lg": "ucl", "date": f"{d}T{hm}", "status": "NS", "h": h, "a": a, "odds": {}})
+    return out
+
+
+# ------------------------------------------------------------------ Europa League (Elo)
+UEL_TEAMS = ["AC Milan", "AFC Bournemouth", "AZ Alkmaar", "Anderlecht", "Ararat-Armenia", "Bayer Leverkusen", "Benfica", "Besiktas",
+             "Celta Vigo", "Celtic", "Crystal Palace", "Dinamo Zagreb", "Ferencvaros", "Hapoel Be'er", "Jagiellonia Bialystok",
+             "Juventus", "Lech Poznan", "Levski Sofia", "Lillestrom", "Lyon", "Marseille", "NEC Nijmegen", "NK Celje", "OFI Crete",
+             "Olympiacos", "Omonia Nicosia", "RB Salzburg", "Real Sociedad", "SK Sturm Graz", "Sparta Prague", "Stade Rennais",
+             "Sunderland", "TSG Hoffenheim", "Torreense", "Union St.-Gilloise", "Viktoria Plzen"]
+UEL_ELO_DATE = "2026-10-14"
+# ClubElo no responde desde los servidores de GitHub (502), así que aquí va un Elo APROXIMADO por club (estimación del autor, no una captura
+# de clubelo.com). Solo se usa cuando clubelo.com no responde; la página lo avisa. Cuando clubelo responde, se usa su valor real.
+UEL_ELO = {
+    "Juventus": 1850, "Bayer Leverkusen": 1845, "AC Milan": 1830, "Benfica": 1805, "Lyon": 1790, "Marseille": 1790, "Crystal Palace": 1790,
+    "AFC Bournemouth": 1770, "Real Sociedad": 1765, "TSG Hoffenheim": 1760, "Celta Vigo": 1745, "Stade Rennais": 1740, "Olympiacos": 1735,
+    "Union St.-Gilloise": 1725, "AZ Alkmaar": 1720, "Sunderland": 1705, "Celtic": 1705, "Besiktas": 1700, "Sparta Prague": 1700,
+    "RB Salzburg": 1700, "Anderlecht": 1690, "Viktoria Plzen": 1680, "Dinamo Zagreb": 1660, "Sturm Graz": 1650, "NEC Nijmegen": 1650,
+    "SK Sturm Graz": 1650, "Ferencvaros": 1640, "Lech Poznan": 1620, "Jagiellonia Bialystok": 1600, "Hapoel Be'er": 1560, "NK Celje": 1560,
+    "Lillestrom": 1560, "OFI Crete": 1540, "Omonia Nicosia": 1540, "Levski Sofia": 1520, "Torreense": 1480, "Ararat-Armenia": 1450,
+}
+UEL_ELO_NAMES = {
+    "ac milan": ["milan"], "afc bournemouth": ["bournemouth"], "az alkmaar": ["az"], "celta vigo": ["celta"], "bayer leverkusen": ["leverkusen"],
+    "jagiellonia bialystok": ["jagiellonia"], "levski sofia": ["levski"], "nec nijmegen": ["nec"], "nk celje": ["celje"], "ofi crete": ["ofi"],
+    "omonia nicosia": ["omonia"], "rb salzburg": ["salzburg"], "sk sturm graz": ["sturm", "sturm graz"], "sparta prague": ["sparta praha"],
+    "stade rennais": ["rennes"], "tsg hoffenheim": ["hoffenheim"], "union st gilloise": ["st gillis", "union sg"], "viktoria plzen": ["plzen"],
+    "hapoel beer": ["hapoel beer sheva", "beer sheva"], "ararat armenia": ["ararat"], "olympiacos": ["olympiakos"], "lyon": ["lyon"],
+    "marseille": ["marseille"], "lillestrom": ["lillestrom"], "dinamo zagreb": ["dinamo zagreb"], "besiktas": ["besiktas"],
+}
+
+
+def uel_params(today, text=None):
+    """Elo de cada club de la Europa League: clubelo.com si responde; si no, el Elo aproximado guardado (la página lo avisa)."""
+    if text is None:
+        text = clubelo_text(today)
+    elo, real = {}, 0
+    table = {}
+    if text:
+        try:
+            df = pd.read_csv(io.StringIO(text))
+            table = {norm(str(c)): float(e) for c, e in zip(df["Club"], df["Elo"])}
+        except Exception as e:  # noqa: BLE001
+            log(f"  clubelo (Europa League): formato inesperado ({e})")
+    for team in UEL_TEAMS:
+        n = norm(team)
+        v = next((table[c] for c in [n] + UEL_ELO_NAMES.get(n, []) if c in table), None)
+        if v is None and table:
+            close = difflib.get_close_matches(n, list(table), n=1, cutoff=0.88)
+            v = table[close[0]] if close else None
+        if v is not None:
+            elo[team], real = round(v, 1), real + 1
+        elif team in UEL_ELO or team.replace("SK ", "") in UEL_ELO:
+            elo[team] = float(UEL_ELO.get(team) or UEL_ELO[team.replace("SK ", "")])
+    if len(elo) < 20:
+        log("  Elo: demasiados equipos sin dato; se omite la Europa League")
+        return None
+    log(f"  Europa League: Elo de clubelo en {real} de {len(elo)} clubes" + ("" if real else " (clubelo no respondió: se usa el Elo aproximado guardado)"))
+    return {"name": "Europa League", "kind": "elo", "elo": elo, "hfa": 100, "T": 2.9, "updated": today.isoformat() if real else UEL_ELO_DATE,
+            "approx": real < len(elo), "n": 0, "models": {}, "teams": sorted(elo), "form": {}}
+
+
+def uel_table(teams, js=None):
+    """Tabla de la fase de liga desde el endpoint de posiciones de ESPN: [[equipo, PJ, G, E, P, GF, GC, Pts], ...] (o None)."""
+    if js is None:
+        js = _get_json("ESPN", "https://site.api.espn.com/apis/v2/sports/soccer/uefa.europa/standings")
+    try:
+        entries = js["children"][0]["standings"]["entries"]
+    except (TypeError, KeyError, IndexError):
+        return None
+    out = []
+    for e in entries:
+        t = match_team((e.get("team") or {}).get("displayName", ""), teams)
+        st = {x.get("name"): x.get("value") for x in e.get("stats") or []}
+        if not t:
+            continue
+        g = lambda k: int(st.get(k) or 0)
+        out.append([t, g("gamesPlayed"), g("wins"), g("ties"), g("losses"), g("pointsFor"), g("pointsAgainst"), g("points")])
+    return out if len(out) >= 20 else None
+
+
+def uel_done(params, today, days=3, espn_days=None):
+    """Marcadores de los últimos días de la Europa League (ESPN), para mostrarlos en la lista como partidos terminados."""
+    if "uel" not in params:
+        return []
+    out, teams = [], params["uel"]["teams"]
+    for i in range(days + 1):
+        day = today - dt.timedelta(days=i)
+        js = espn_days("uel", day) if espn_days else _get_json("ESPN", f"https://site.api.espn.com/apis/site/v2/sports/soccer/uefa.europa/scoreboard?dates={day:%Y%m%d}")
+        if js is None:
+            break
+        for d, h, a, x, y, _ in parse_espn(js):
+            mh, ma = match_team(h, teams), match_team(a, teams)
+            if mh and ma and mh != ma:
+                ds = str(d)
+                out.append({"id": f"res-uel-{d}-{mh}", "lg": "uel", "date": f"{ds[:4]}-{ds[4:6]}-{ds[6:]}T00:00", "status": "FT",
+                            "h": mh, "a": ma, "odds": {}, "score": [int(x), int(y)]})
     return out
 
 
@@ -995,7 +1131,7 @@ def build(template, out_path="docs/index.html"):
         try:
             df = load_league(key, v, seasons, today)
             df = add_extra(df, of_extra(key, df, today))
-            for label, rows in ([] if v.get("src") == "espn" else live_rows(key, max((df.Date.max() - pd.Timedelta(days=3)).date(), today - dt.timedelta(days=45)), today)):
+            for label, rows in ([] if v.get("src") in ("espn", "oldb") else live_rows(key, max((df.Date.max() - pd.Timedelta(days=3)).date(), today - dt.timedelta(days=45)), today)):
                 ex = fill_missing(key, df, rows)
                 if ex is not None:
                     EXTRA_N[label] = EXTRA_N.get(label, 0) + len(ex)
@@ -1015,6 +1151,12 @@ def build(template, out_path="docs/index.html"):
         u["map"] = ucl_domestic(params)
         log("  Champions con historial local: " + ", ".join(sorted(u["map"])))
         params["ucl"] = u
+    e = uel_params(today)
+    if e:
+        e["map"] = ucl_domestic(params, UEL_TEAMS)
+        e["tab"] = uel_table(e["teams"])
+        log("  Europa League con historial local: " + ", ".join(sorted(e["map"])))
+        params["uel"] = e
     fixtures, note = csv_fixtures(params, today)
     fx2 = extra_fixtures(params, today)
     have = {(f["lg"], f["h"], f["a"]) for f in fixtures}
@@ -1031,7 +1173,7 @@ def build(template, out_path="docs/index.html"):
             if ml:
                 f["ml"] = ml
     uclh = load_uclh(today)
-    done = recent_results(params, uclh, today)
+    done = recent_results(params, uclh, today) + uel_done(params, today)
     seen = {(d["lg"], d["h"], d["a"]) for d in done}
     if EXTRA_N:
         note += " Marcadores al día con " + ", ".join(f"{k} (+{n})" for k, n in EXTRA_N.items()) + " (solo goles; córners y tiros llegan con football-data.co.uk)."
@@ -1046,6 +1188,8 @@ def build(template, out_path="docs/index.html"):
     if "ucl" in params and params["ucl"]["updated"] == STATIC_ELO_DATE != today.isoformat():
         falta = [t for t in UCL_TEAMS if t not in params["ucl"]["elo"]]
         note += f" Champions: Elo guardado del {STATIC_ELO_DATE}." + (" Faltan: " + ", ".join(falta) + "." if falta else "")
+    if "uel" in params and params["uel"].get("approx"):
+        note += " Europa League: clubelo.com no respondió; se usa un Elo aproximado de referencia (no validado)."
     log(note)
     try:
         import bajas as _bj
@@ -1832,6 +1976,11 @@ function expectHtml(h,a,c,fin){
 /* ---------- clasificación ---------- */
 function standings(lg){
   const L=DATA.leagues[lg]; let games=[], names=[], note="";
+  if(L.tab&&L.tab.length){                  // Europa League: tabla de la fase de liga tal como la publica ESPN
+    const rows=L.tab.map(r=>({t:r[0],pj:r[1],g:r[2],e:r[3],p:r[4],gf:r[5],gc:r[6],pts:r[7],res:[]})).sort((x,y)=>y.pts-x.pts||(y.gf-y.gc)-(x.gf-x.gc)||y.gf-x.gf||x.t.localeCompare(y.t));
+    rows.forEach((r,i)=>{r.pos=i+1;});
+    return {rows:rows,note:"Fase de liga de la Europa League 2026/27 (fuente: ESPN). Orden: puntos, diferencia de goles y goles a favor; los criterios oficiales de desempate pueden ser otros.",n:rows.reduce((a,r)=>a+r.pj,0)/2};
+  }
   if(lg==="ucl"){
     games=(DATA.uclh||[]).filter(r=>r[5]==="Fase de liga"&&r[0]>=20260701).map(r=>({h:r[1],a:r[2],hg:r[3],ag:r[4],d:r[0]}));
     note="Fase de liga 2026/27 de la Champions. Los clubes con más jornadas jugadas suben primero; la tabla completa se llena jornada a jornada.";
@@ -1904,7 +2053,7 @@ function fillTeams(){
 }
 function formHtml(t){
   let f=(DATA.leagues[league].form||{})[t]||"";
-  if(!f&&league==="ucl"){                    // Champions: últimos 5 oficiales (liga local + Champions)
+  if(!f&&isElo()){                    // Champions y Europa League: últimos 5 oficiales (liga local + copa europea)
     const sr=seriesFor(t,"all",5);
     if(sr.ok)f=sr.ms.slice().reverse().map(m=>{const x=m.home?m.hg:m.ag,y=m.home?m.ag:m.hg;return x>y?"G":x===y?"E":"P";}).join("");
   }
@@ -1964,12 +2113,13 @@ function ymd(n){const y=Math.floor(n/10000),m=Math.floor(n/100)%100,d=n%100;retu
 /* ---------- historial: partidos de liga y de Champions ---------- */
 function scTxt(){
   const n=win;
-  return {all:league==="ucl"?"Últimos "+n+" partidos oficiales de cada equipo, con su liga local y la Champions League juntas.":"Últimos "+n+" partidos de liga de cada equipo, jugados de local y de visita.",
+  return {all:isElo()?"Últimos "+n+" partidos oficiales de cada equipo, con su liga local y la Champions League (si la jugó) juntas.":"Últimos "+n+" partidos de liga de cada equipo, jugados de local y de visita.",
     home:"Últimos "+n+" partidos de liga en los que cada equipo jugó de local.",
     away:"Últimos "+n+" partidos de liga en los que cada equipo jugó de visita.",
     ucl:"Últimos "+n+" partidos de Champions League de cada equipo, con las rondas previas. Hay datos de 2024/25, 2025/26 y la jornada 1 de 2026/27."}[scope];
 }
 let scope="all", view="list", prevView="list", tab="sum", histTeam="h", uclSet=null, win=10, met="goals", who="tot", dir="o", lineSel={};
+function isElo(lg){const L=DATA.leagues[lg||league];return !!(L&&L.kind==="elo");}
 function uclNames(){if(!uclSet){uclSet=new Set();(DATA.uclh||[]).forEach(r=>{uclSet.add(r[1]);uclSet.add(r[2]);});}return uclSet;}
 function uclName(team){
   if(league==="ucl")return team;
@@ -2003,7 +2153,7 @@ function seriesFor(team,sc,n){
     const c=uclName(team), ms=c?uclMatches(c,n):[];
     return ms.length?{ok:true,name:c,ms:ms}:{ok:false,msg:"No jugó la Champions League (ni sus rondas previas) en las últimas dos temporadas."};
   }
-  if(league==="ucl"&&sc==="all"){          // en un partido de Champions, "Todos" junta su liga local y la Champions
+  if(isElo()&&sc==="all"){          // en un partido de copa europea, "Todos" junta su liga local y la Champions
     const c=uclName(team), res0=resolveHist(team);
     const ms=((res0?domMatches(res0,n,"all"):[]).concat(c?uclMatches(c,n):[])).sort((x,y)=>y.d-x.d).slice(0,n);
     if(ms.length)return {ok:true,name:c||res0.name,ms:ms,mixed:true};
@@ -2493,65 +2643,98 @@ function comboOfDay(items){
   if(pick.length===3&&pick[0].p*pick[1].p*pick[2].p<0.30)pick=pick.slice(0,2);
   return {legs:pick,n:per.length};
 }
-/* 🚀 Parlay Soñador: solo "falsos favoritos" y tendencias de goles que el modelo de Poisson subestima */
+/* 🚀 Parlay Soñador, dos niveles siempre activos.
+   Prioridad 1: valor esperado positivo, falso favorito o tendencia de goles que Poisson subestima.
+   Prioridad 2 (respaldo): selecciones que el modelo (Poisson y Elo) proyecta con 45% a 70% de probabilidad y cuota justa de 1.40 a 2.20. */
+const DR_FALL=new Set(["1","2","o:goals:2.5","u:goals:2.5","btts:y","btts:n"]);
+function drFall(r){return DR_FALL.has(r.key)||(r.sec==="Resultado"&&/^Doble oportunidad/.test(r.label));}
 function dreamPool(items){
-  const pool=[], st={n:items.length,fav:0,big:0,trend:0};
+  const pool=[], st={n:items.length,t1:0,fav:0,trend:0,ev:0,big:0};
   items.forEach(it=>{
-    const f=it.f, fr=it.fr, cm=new Map(fr.c.rows.map(r=>[rowKey(r),r])), pmap=new Map(fr.pure.rows.map(r=>[rowKey(r),r])), cands=[];
-    if(fr.hasMkt){                                                     // falso favorito: el mercado le da más que el modelo (4 a menos de 8 puntos)
+    const f=it.f, fr=it.fr, L=DATA.leagues[f.lg], cm=new Map(fr.c.rows.map(r=>[rowKey(r),r])), pmap=new Map(fr.pure.rows.map(r=>[rowKey(r),r]));
+    const sc=f.lg==="ucl"?"ucl":"all", saved=league; let sh=null,sa=null;
+    league=f.lg; try{sh=seriesFor(f.h,sc,10); sa=seriesFor(f.a,sc,10);}catch(e){} finally{league=saved;}
+    const tr={};                                                          // tendencia de goles de los dos equipos (7 de 10 o más cada uno)
+    if(sh&&sh.ok&&sa&&sa.ok){
+      const A=toTrend(sh.ms), B=toTrend(sa.ms);
+      [[0,"o:goals:2.5"],[2,"btts:y"],[1,"u:goals:2.5"]].forEach(td=>{
+        const x=trendHits(A,TM[td[0]]), y=trendHits(B,TM[td[0]]); if(x.n<8||y.n<8)return;
+        const rx=x.k/x.n, ry=y.k/y.n; if(Math.min(rx,ry)<0.7)return;
+        tr[td[1]]={x:x,y:y,rate:(rx+ry)/2};
+      });
+    }
+    const elo=L.kind==="elo"&&L.elo[f.h]!=null&&L.elo[f.a]!=null?[L.elo[f.h],L.elo[f.a]]:null;
+    const why=(row,q)=>{                                                   // por qué el modelo eligió esta pata
+      const p=["Poisson "+pct(q.p)+(fr.hasMkt?" · mercado "+pct(row.p):"")];
+      const isRes=row.key==="1"||row.key==="2"||row.sec==="Resultado";
+      if(elo&&isRes){const d=elo[0]-elo[1]; p.push("Elo a favor de "+(d>=0?f.h:f.a)+" (+"+Math.round(Math.abs(d))+": "+Math.round(elo[0])+" vs "+Math.round(elo[1])+")");}
+      else if(!isRes)p.push("goles esperados "+fr.pure.lh.toFixed(1)+"–"+fr.pure.la.toFixed(1)+(elo?" (Elo "+Math.round(elo[0])+" vs "+Math.round(elo[1])+")":""));
+      const t=tr[row.key]; if(t)p.push("tendencia de goles: "+f.h+" "+t.x.k+"/"+t.x.n+" y "+f.a+" "+t.y.k+"/"+t.y.n);
+      return p.join(" · ");
+    };
+    const cands=[], mk=(row,q,tier,tag,score,note)=>cands.push({row:row,q:q,tier:tier,tag:tag,score:score,note:note,pc:Math.min(row.p,q.p)});
+    // prioridad 1a: valor esperado positivo con las cuotas cargadas
+    fr.c.rows.filter(pkEligibleM).forEach(r=>{const v=fr.oddsOf(r); if(!(v>1))return; const ev=r.p*v-1, q=pmap.get(rowKey(r)); if(!q)return;
+      if(ev>0&&flagFor(r,v)==="big"){st.big++;return;}
+      if(ev>0&&Math.min(r.p,q.p)>=0.40){mk(r,q,1,"💎 Valor EV+",0.2+ev,"EV "+(ev*100).toFixed(1)+"% con cuota "+f2(v)+" · "+why(r,q));}});
+    // prioridad 1b: falso favorito (4 a menos de 8 puntos): se apuesta la doble oportunidad contra él
+    if(fr.hasMkt){
       const m1=cm.get("1"), m2=cm.get("2"), q1=pmap.get("1"), q2=pmap.get("2");
       if(m1&&m2&&q1&&q2){
         const home=m1.p>=m2.p, mf=home?m1:m2, qf=home?q1:q2, gap=mf.p-qf.p;
         if(mf.p>=0.45&&gap>=0.04){
           if(gap>=0.08)st.big++;
-          else{
-            const k="Resultado|Doble oportunidad "+(home?f.a:f.h)+" o empate", row=cm.get(k), q=pmap.get(k);
-            if(row&&q&&Math.min(row.p,q.p)>=0.40){
-              st.fav++;
-              cands.push({kind:"fav",row:row,q:q,score:gap,note:"Falso favorito: "+(home?f.h:f.a)+" tiene "+pct(mf.p)+" en el mercado y "+pct(qf.p)+" en el modelo."});
-            }
-          }
+          else{const k="Resultado|Doble oportunidad "+(home?f.a:f.h)+" o empate", row=cm.get(k), q=pmap.get(k);
+            if(row&&q&&Math.min(row.p,q.p)>=0.40)mk(row,q,1,"🎭 Falso favorito",gap,(home?f.h:f.a)+" tiene "+pct(mf.p)+" en el mercado y "+pct(qf.p)+" en el modelo · "+why(row,q));}
         }
       }
     }
-    const sc=f.lg==="ucl"?"ucl":"all", saved=league; let sh=null,sa=null;
-    league=f.lg; try{sh=seriesFor(f.h,sc,10); sa=seriesFor(f.a,sc,10);}catch(e){} finally{league=saved;}
-    if(sh&&sh.ok&&sa&&sa.ok){                                          // tendencia oculta: los dos equipos la cumplen y Poisson da 8 o más puntos menos
-      const A=toTrend(sh.ms), B=toTrend(sa.ms);
-      [[0,"o:goals:2.5"],[2,"btts:y"],[1,"u:goals:2.5"]].forEach(td=>{
-        const x=trendHits(A,TM[td[0]]), y=trendHits(B,TM[td[0]]); if(x.n<8||y.n<8)return;
-        const rx=x.k/x.n, ry=y.k/y.n; if(Math.min(rx,ry)<0.7)return;
-        const row=cm.get(td[1]), q=pmap.get(td[1]); if(!row||!q)return;
-        const gap=(rx+ry)/2-q.p; if(gap<0.08||Math.min(row.p,q.p)<0.40)return;
-        st.trend++;
-        cands.push({kind:"trend",row:row,q:q,score:gap,note:"Tendencia oculta: "+f.h+" "+x.k+"/"+x.n+" y "+f.a+" "+y.k+"/"+y.n+" partidos; Poisson da "+pct(q.p)+"."});
-      });
-    }
+    // prioridad 1c: tendencia oculta (Poisson da 8 o más puntos menos que la racha de los dos equipos)
+    Object.keys(tr).forEach(k=>{const row=cm.get(k), q=pmap.get(k); if(!row||!q)return; const gap=tr[k].rate-q.p;
+      if(gap>=0.08&&Math.min(row.p,q.p)>=0.40)mk(row,q,1,"📈 Tendencia oculta",gap,why(row,q));});
+    // prioridad 2: respaldo estadístico, 45% a 70% de probabilidad y cuota justa de 1.40 a 2.20
+    fr.c.rows.filter(drFall).forEach(r=>{const q=pmap.get(rowKey(r)); if(!q)return; const pc=Math.min(r.p,q.p);
+      if(pc>=1/2.2&&pc<=1/1.4)mk(r,q,2,"📊 Respaldo estadístico",pc,why(r,q));});
+    // último recurso: si el partido no tiene nada en ese rango, la selección más probable por debajo de 80%
+    if(!cands.length){const r=fr.c.rows.filter(drFall).filter(x=>x.p<0.8).sort((a,b)=>b.p-a.p)[0], q=r&&pmap.get(rowKey(r)); if(r&&q)mk(r,q,3,"📊 Respaldo estadístico (fuera de rango)",Math.min(r.p,q.p),why(r,q));}
     if(!cands.length)return;
-    cands.sort((a,b)=>b.score-a.score); const c=cands[0], v=fr.oddsOf(c.row);
-    pool.push({fx:f,match:it.match,lg:f.lg,label:c.row.label,id:rowKey(c.row),p:Math.min(c.row.p,c.q.p),pMod:c.q.p,pMkt:c.row.p,
-      v:v>1?v:null,note:c.note,kind:c.kind,score:c.score});
+    cands.sort((a,b)=>a.tier-b.tier||b.score-a.score);
+    const seen=new Set(), legs=[];
+    cands.forEach(c=>{const id=rowKey(c.row); if(seen.has(id)||legs.length>=2)return; seen.add(id);
+      const v=fr.oddsOf(c.row);
+      legs.push({fx:f,match:it.match,lg:f.lg,label:c.row.label,id:id,p:c.pc,pMod:c.q.p,pMkt:c.row.p,v:v>1?v:null,tier:c.tier,tag:c.tag,note:c.tag+": "+c.note});});
+    if(legs[0].tier===1){st.t1++; if(/Valor/.test(legs[0].tag))st.ev++; else if(/Falso/.test(legs[0].tag))st.fav++; else st.trend++;}
+    pool.push({match:it.match,legs:legs,rank:legs[0].tier===1?3+cands[0].score:legs[0].tier===2?legs[0].p:0});
   });
   return {pool:pool,st:st};
 }
 function dreamSets(pool){
-  const P=pool.slice().sort((a,b)=>b.score-a.score).slice(0,12), n=P.length, best={5:null,8:null};
-  for(let m=1;m<(1<<n);m++){
-    const idx=[]; for(let i=0;i<n;i++)if(m&(1<<i))idx.push(i);
-    if(idx.length<2||idx.length>4)continue;
-    const fair=1/idx.reduce((s,i)=>s*P[i].p,1);
-    [[5,5,14],[8,8,16]].forEach(t=>{if(fair>=t[1]&&fair<=t[2]){const b=best[t[0]]; if(!b||fair<b.fair-1e-9||(Math.abs(fair-b.fair)<1e-9&&idx.length<b.legs.length))best[t[0]]={fair:fair,legs:idx.map(i=>P[i])};}});
-  }
-  if(best[8]&&best[5]&&best[8].legs.length===best[5].legs.length&&best[8].legs.every(l=>best[5].legs.includes(l)))best[8]=null;
-  return best;
+  const P=pool.slice().sort((a,b)=>b.rank-a.rank).slice(0,10), all=[];
+  const rec=(i,ch,pr,t1)=>{
+    if(ch.length>=1)all.push({legs:ch.slice(),pr:pr,fair:1/pr,t1:t1,n:ch.length});
+    if(ch.length>=6)return;
+    for(let j=i;j<P.length;j++)for(const lg of P[j].legs){ch.push(lg); rec(j+1,ch,pr*lg.p,t1+(lg.tier===1?1:0)); ch.pop();}
+  };
+  rec(0,[],1,0);
+  const pick=(f,ok,sortFn)=>{const a=all.filter(f); return a.length?(a.sort(sortFn),a[0]):null;};
+  const byTier=(x,y)=>y.t1-x.t1||y.pr-x.pr;
+  // Nivel 1: 3 a 4 selecciones con cuota justa combinada de 5.00 a 8.50 (probabilidad ~12% a 20%)
+  let n1=pick(s=>s.n>=3&&s.n<=4&&s.fair>=5&&s.fair<=8.5,0,byTier), r1=!!n1;
+  if(!n1)n1=pick(s=>s.n>=2&&s.n<=4&&s.fair>=5,0,(x,y)=>x.fair-y.fair||y.t1-x.t1);
+  if(!n1)n1=pick(s=>s.n<=4,0,(x,y)=>y.fair-x.fair);
+  // Nivel 2: 4 a 6 selecciones con cuota justa combinada de 10.00 o más (probabilidad de 10% o menos)
+  let n2=pick(s=>s.n>=4&&s.n<=6&&s.fair>=10&&s.fair<=60,0,byTier), r2=!!n2;
+  if(!n2)n2=pick(s=>s.n>=2&&s.n<=6&&s.fair>=10,0,(x,y)=>x.fair-y.fair||y.t1-x.t1);
+  if(!n2)n2=pick(s=>s.n<=6,0,(x,y)=>y.fair-x.fair);
+  return {n1:n1&&Object.assign(n1,{ok:r1}),n2:n2&&Object.assign(n2,{ok:r2}),nm:P.length};
 }
-function dreamStake(p,v){                     // Kelly fraccional, pero nunca más del 1% del bankroll
-  const ev=p*v-1;
-  if(!(ev>1e-12))return {cls:"stk no",html:"Stake sugerido: <b>L 0 (No apostar)</b><small>Con esa cuota no hay valor esperado positivo.</small>"};
-  const f=Math.min(0.01,(ev/(v-1))*(bank.k/100)), pc=(f*100).toFixed(f<0.01?2:1)+"% del bankroll";
-  if(!(bank.v>0))return {cls:"stk yes",html:`Stake sugerido: <b>${pc}</b> (tope 1%)<small>Escribe tu bankroll arriba para verlo en lempiras.</small>`};
+function dreamStake(p,v,cap){                 // Kelly fraccional, pero nunca más del tope (1% a 2% del bankroll)
+  cap=cap||0.01; const ev=p*v-1, capTxt=(cap*100)+"%";
+  if(!(ev>1e-12))return {cls:"stk no",html:`Stake sugerido: <b>L 0 (No apostar)</b><small>Con esa cuota no hay valor esperado positivo. Si lo juegas igual por diversión, no pases de ${bank.v>0?lps(bank.v*cap):capTxt+" del bankroll"}.</small>`};
+  const f=Math.min(cap,(ev/(v-1))*(bank.k/100)), pc=(f*100).toFixed(f<0.01?2:1)+"% del bankroll";
+  if(!(bank.v>0))return {cls:"stk yes",html:`Stake sugerido: <b>${pc}</b> (tope ${capTxt})<small>Escribe tu bankroll arriba para verlo en lempiras.</small>`};
   const m=bank.v*f;
-  return {cls:"stk yes",html:`Stake sugerido: <b>${m<0.5?"menos de L 1":lps(m)}</b><small>${pc} · tope 1% del bankroll</small>`};
+  return {cls:"stk yes",html:`Stake sugerido: <b>${m<0.5?"menos de L 1":lps(m)}</b><small>${pc} · tope ${capTxt} del bankroll</small>`};
 }
 
 /* --- cuota de la casa editable en una selección suelta --- */
@@ -2583,12 +2766,12 @@ function parlUpdate(id,legs,dream){
   const e=$("pev_"+id), s=$("pst_"+id); if(!e||!s)return;
   if(!(v>1)){
     e.textContent="";e.className="ev";
-    s.innerHTML=dream?`<div class="${bank.v>0?"stk yes":"stk no"}">Tope de stake: <b>${bank.v>0?lps(bank.v*0.01):"1% del bankroll"}</b><small>Solo si tu casa paga más de ${f2(1/pr)} por el parlay. Escribe la cuota para confirmarlo.</small></div>`
+    s.innerHTML=dream?`<div class="${bank.v>0?"stk yes":"stk no"}">Tope de stake: <b>${bank.v>0?lps(bank.v*dream):(dream*100)+"% del bankroll"}</b><small>Solo si tu casa paga más de ${f2(1/pr)} por el parlay. Escribe la cuota para confirmarlo.</small></div>`
       :`<div class="sub" style="margin-top:6px">Escribe la cuota total que te da tu casa para ver si el parlay tiene valor.</div>`;
     return;
   }
   const ev=pr*v-1; e.className="ev "+(ev>0?"pos":"neg"); e.textContent=(ev>0?"+":"")+(ev*100).toFixed(1)+"%";
-  const st=dream?dreamStake(pr,v):stakeHtml(pr,v);
+  const st=dream?dreamStake(pr,v,dream):stakeHtml(pr,v);
   s.innerHTML=`<div class="${st.cls}">${st.html}</div>${typed>1||!prod?"":`<div class="sub">Cuota calculada con las cuotas de cada selección; las casas suelen pagar menos en una combinada. Escribe la real.</div>`}`;
 }
 function parlCard(id,title,sub,legs,extra){
@@ -2621,19 +2804,23 @@ function comboHtml(C,sc){
   const legs=C.legs.map(c=>legOfC(c));
   return parlCard(sc.pfx+"combo",sc.comboT+" ("+legs.length+" selecciones)","Selecciones de partidos distintos con probabilidad individual entre 62% y 80%, ordenadas por valor esperado cuando hay cuotas cargadas.",legs,{foot:useBtn(sc.pfx+"combo",legs)});
 }
-function dreamHtml(D,sets,sc){
-  const head=`<div class="sub" style="margin:0 0 6px">Solo mercados donde el modelo ve un <b>falso favorito</b> (el mercado le da 4 a menos de 8 puntos más que el modelo) o una <b>tendencia de goles</b> que cumplen los dos equipos y que Poisson subestima en 8 puntos o más. Máximo 4 selecciones, una por partido, cada una con 40% o más. Es el parlay de mayor riesgo: la probabilidad real mostrada usa la <b>menor</b> entre el modelo y el mercado de cada selección.</div>`;
-  const sts=D.st, why=`Partidos escaneados: ${sts.n} · con falso favorito: ${sts.fav} · con tendencia oculta: ${sts.trend}${sts.big?` · descartados por diferencia de 8+ puntos (probable error del modelo): ${sts.big}`:""}.`;
-  const cards=[5,8].filter(k=>sets[k]).map(k=>[k,sc.dreamT+" · cuota justa de "+(sets[k].fair>=8?"8.00":"5.00")+" o más"]).map(t=>{
-    const s=sets[t[0]], legs=s.legs.map(l=>({id:l.fx.lg+"|"+l.match+"|"+l.id,lg:l.lg,match:l.match,label:l.label,p:l.p,odds:l.v||null,note:l.note}));
-    const model=s.legs.reduce((x,l)=>x*l.pMod,1), mkt=s.legs.reduce((x,l)=>x*l.pMkt,1), id=sc.pfx+"dream"+t[0];
-    parlDream[id]=true;
-    return parlCard(id,t[1],"Cuota justa combinada "+f2(s.fair)+". La casa paga menos que la cuota justa: confirma que tu casa pague de verdad "+(s.fair>=8?"más de 8.00":"más de 5.00")+" antes de jugarlo.",legs,
-      {dream:true,pre:`<div class="sub" style="margin-top:8px">Solo con el modelo: ${(model*100).toFixed(1)}% · solo con el mercado: ${(mkt*100).toFixed(1)}%.</div>`,foot:useBtn(id,legs)});
+function dreamHtml(D,S,sc){
+  const st=D.st, nm=sc.dreamT.replace(/^🚀\s*/,""), lvl=[[1,"🚀 "+nm+" Nivel 1 (Cuota 5.00+)",0.02,"3 a 4 selecciones, una por partido, hasta una cuota justa combinada de 5.00 a 8.50 (probabilidad combinada de ~12% a 20%).",5],
+    [2,"🌌 "+nm+" Nivel 2 · Mega Cuota (Cuota 10.00+)",0.01,"4 a 6 selecciones, una por partido, hasta una cuota justa combinada de 10.00 o más (probabilidad combinada de 10% o menos).",10]];
+  const head=`<div class="sub" style="margin:0 0 6px">Siempre se arman con lo mejor que el modelo tiene ${sc.h}. <b>Primero</b> entran valor esperado positivo, falsos favoritos y tendencias de goles que Poisson subestima; <b>si no hay</b>, se completan con selecciones que Poisson y Elo proyectan con 45% a 70% de probabilidad (cuota justa de 1.40 a 2.20). Cada pata dice por qué fue elegida. La probabilidad real usa la <b>menor</b> entre el modelo y el mercado de cada selección.</div>
+    <div class="sub">Partidos escaneados: ${st.n} · patas con prioridad 1: ${st.t1} (valor ${st.ev}, falso favorito ${st.fav}, tendencia oculta ${st.trend})${st.big?` · descartadas por diferencia de 8+ puntos (probable error del modelo): ${st.big}`:""}.</div>`;
+  let html=`<div class="box parl"><h3>${sc.dreamT}</h3>${head}</div>`;
+  lvl.forEach(l=>{
+    const s=S["n"+l[0]], id=sc.pfx+"dream"+l[0];
+    if(!s){html+=`<div class="box parl"><h3>${l[1]}</h3><div class="sub">${l[3]} Con ${sc.h==="hoy"?"los partidos de hoy":"los partidos de esta jornada"} no hay selecciones suficientes para armarlo.</div></div>`;return;}
+    const legs=s.legs.map(x=>({id:x.fx.lg+"|"+x.match+"|"+x.id,lg:x.lg,match:x.match,label:x.label,p:x.p,odds:x.v||null,note:x.note}));
+    const model=s.legs.reduce((a,x)=>a*x.pMod,1), mkt=s.legs.reduce((a,x)=>a*x.pMkt,1);
+    parlDream[id]=l[2];
+    const warn=s.ok?"":`<div class="flag" style="margin-top:8px"><b>Aviso:</b> con ${sc.h==="hoy"?"los partidos de hoy":"los partidos de esta jornada"} (${S.nm} con datos) no se alcanza la cuota justa de ${l[4]}.00 con ${l[0]===1?"3 a 4":"4 a 6"} selecciones de partidos distintos; esta es la mejor combinación disponible (${f2(s.fair)}).</div>`;
+    html+=parlCard(id,l[1],l[3]+" Cuota justa combinada: "+f2(s.fair)+". Tu casa tiene que pagar más que esa cuota para que el parlay valga la pena; escribe abajo lo que paga.",legs,
+      {dream:l[2],pre:`<div class="sub" style="margin-top:8px">Solo con el modelo (Poisson/Elo): ${(model*100).toFixed(1)}% · solo con el mercado: ${(mkt*100).toFixed(1)}% · patas de prioridad 1: ${s.t1} de ${s.n}.</div>${warn}`,foot:useBtn(id,legs)});
   });
-  if(!cards.length)return `<div class="box parl"><h3>${sc.dreamT}</h3>${head}<div class="sub"><b>${sc.H==="Hoy"?"Hoy no hay":"En esta jornada no hay"} un parlay de cuota alta bien respaldado.</b> ${why} Con menos de 2 selecciones válidas, o sin una combinación que llegue a 5.00 sin pasar de 4 selecciones, es mejor no armarlo.</div></div>`;
-  return `<div class="box parl"><h3>${sc.dreamT}</h3>${head}<div class="sub">${why}</div></div>`+cards.join("")+
-    `<div class="callout" style="margin-top:10px"><b>Cuidado.</b> En pruebas con partidos pasados, las diferencias entre el modelo y el mercado casi siempre fueron error del modelo, y una racha de 8 de 10 se cumplió 69% de las veces, no 80–90%. Por eso el stake nunca pasa de 1% del bankroll y es L 0 si la cuota no da valor.</div>`;
+  return html+`<div class="callout" style="margin-top:10px"><b>Cuidado.</b> Son cuotas altas: ganan pocas veces. En pruebas con partidos pasados el modelo no superó a las casas, las diferencias con el mercado casi siempre fueron error del modelo, y una racha de 8 de 10 se cumplió 69% de las veces, no 80–90%. Por eso el stake tiene tope de ${lvl[0][2]*100}% (Nivel 1) y ${lvl[1][2]*100}% (Nivel 2) del bankroll, y es L 0 si la cuota no da valor.</div>`;
 }
 function renderParl(){
   const sc=scanDay(); scopeReset("D_");
@@ -2647,7 +2834,7 @@ function renderParl(){
   }
   renderMine(); showFeat();
   Object.keys(hiMap).forEach(k=>{if(k.startsWith("D_"))hiUpdate(k);});
-  document.querySelectorAll("#parlPlay [data-parl]").forEach(el=>{const id=el.dataset.parl, legs=parlSets[id]; if(legs)parlUpdate(id,legs,!!parlDream[id]);});
+  document.querySelectorAll("#parlPlay [data-parl]").forEach(el=>{const id=el.dataset.parl, legs=parlSets[id]; if(legs)parlUpdate(id,legs,parlDream[id]||0);});
 }
 let parlTimer=null;
 function schedParl(){if(parlTimer)return; parlTimer=setTimeout(()=>{parlTimer=null; try{renderParl();}catch(e){}},0);}
@@ -2674,7 +2861,7 @@ function bindParl(el,re){                      // mismos controles (cuota de la 
     }
     const id=d.pid; if(!id)return;
     parlOdds[id]=t.value;
-    parlUpdate(id,id==="mine"?parlay:parlSets[id]||[],!!parlDream[id]);
+    parlUpdate(id,id==="mine"?parlay:parlSets[id]||[],parlDream[id]||0);
   });
   el.addEventListener("change",ev=>{                     // al terminar de escribir una cuota se reordena el pick (si el cursor pasó a otro campo, espera)
     if(!(ev.target.dataset&&ev.target.dataset.hi!==undefined))return;
@@ -2699,7 +2886,7 @@ function renderLgPanel(){
   $("lgSub").innerHTML=`Calculado solo con los <b>${sc.items.length}</b> ${sc.items.length===1?"partido":"partidos"} de ${esc(DATA.leagues[league].name)} de este día que aún no empiezan. ${nO?`Hay cuotas cargadas en ${nO}.`:"No hay cuotas cargadas: sin cuotas no se mide el valor (escríbelas en cada selección o cárgalas dentro del partido)."} Cambia de día o de liga arriba y se recalcula.`;
   $("lgPlay").innerHTML=pickHtml(P,LSC)+comboHtml(C,LSC)+dreamHtml(D,S,LSC);
   Object.keys(hiMap).forEach(k=>{if(k.startsWith("L_"))hiUpdate(k);});
-  document.querySelectorAll("#lgPlay [data-parl]").forEach(el=>{const id=el.dataset.parl, legs=parlSets[id]; if(legs)parlUpdate(id,legs,!!parlDream[id]);});
+  document.querySelectorAll("#lgPlay [data-parl]").forEach(el=>{const id=el.dataset.parl, legs=parlSets[id]; if(legs)parlUpdate(id,legs,parlDream[id]||0);});
 }
 function schedLg(){if(lgTimer)return; lgTimer=setTimeout(()=>{lgTimer=null; try{renderLgPanel();}catch(e){}},0);}
 function lgPanelSync(){                         // se llama cada vez que cambia la liga o el día
@@ -2773,7 +2960,7 @@ $("pRes").addEventListener("click",ev=>{
 });
 
 /* ---------- The Odds API: cuotas del mercado desde el navegador ---------- */
-const ODDS_SPORT={bundesliga:"soccer_germany_bundesliga",premier:"soccer_epl",laliga:"soccer_spain_la_liga",eredivisie:"soccer_netherlands_eredivisie",noruega:"soccer_norway_eliteserien",arabia:"soccer_saudi_arabia_pro_league",mls:"soccer_usa_mls",ligamx:"soccer_mexico_ligamx",ucl:"soccer_uefa_champs_league"};
+const ODDS_SPORT={bundesliga:"soccer_germany_bundesliga",premier:"soccer_epl",laliga:"soccer_spain_la_liga",eredivisie:"soccer_netherlands_eredivisie",noruega:"soccer_norway_eliteserien",arabia:"soccer_saudi_arabia_pro_league",mls:"soccer_usa_mls",ligamx:"soccer_mexico_ligamx",ucl:"soccer_uefa_champs_league",uel:"soccer_uefa_europa_league",liga3:"soccer_germany_liga3"};
 const KEYA="scoutpicks.oddsapikey.v1", KEYC="scoutpicks.oddsapi.v1", ODDS_TTL=30*60*1000;
 let apiStore={}, memKeyA="", memCacheA={};
 function getApiKey(){try{return localStorage.getItem(KEYA)||memKeyA;}catch(e){return memKeyA;}}
@@ -2890,7 +3077,7 @@ keyStTxt(); { const c0=readApiCache(), ks=Object.keys(c0); if(ks.length){const l
 /* ---------- pantalla del partido ---------- */
 function updTxt(){
   const L=DATA.leagues[league];
-  $("upd").innerHTML=(L.kind==="elo"?"Ranking Elo del "+esc(L.updated):"Datos hasta "+esc(L.updated))+"<br>Actualizado "+esc((DATA.generated||"—").slice(0,16));
+  $("upd").innerHTML=(L.kind==="elo"?"Ranking Elo"+(L.approx?" aproximado":"")+" del "+esc(L.updated):"Datos hasta "+esc(L.updated))+"<br>Actualizado "+esc((DATA.generated||"—").slice(0,16));
 }
 function fitName(el){const n=el.textContent.length; el.style.fontSize=(n<=7?34:n<=10?29:n<=13?25:21)+"px";}
 /* ---------- 🚑 Bajas y Sanciones Clave: lista por equipo (fuente pública + manual) conectada al modelo ---------- */
@@ -3042,7 +3229,7 @@ function render(){
          :"No hay cuotas de las casas para este partido. Escribe las de tu casa en los tres campos de 1, empate y 2.");
   const how=[];
   if(cur.src==="user") how.push("Estas probabilidades se calcularon a partir de las cuotas que escribiste (resultado y, si las pusiste, más y menos 2.5), sin el margen de la casa. Ya no son las del modelo.");
-  else if(L.kind==="elo") how.push("Las probabilidades salen del ranking Elo de los clubes. No están validadas con partidos pasados de Champions, así que el error puede ser mayor que en las ligas. Si escribes las cuotas de tu casa, se recalculan con ellas.");
+  else if(L.kind==="elo") how.push("Las probabilidades salen del ranking Elo de los clubes. No están validadas con partidos pasados de copas europeas, así que el error puede ser mayor que en las ligas."+(L.approx?" Ojo: clubelo.com no respondió y varios Elo son aproximados (estimación de referencia), así que conviene cargar las cuotas de tu casa o The Odds API antes de apostar.":"")+" Si escribes las cuotas de tu casa, se recalculan con ellas.");
   else if(m) how.push("En las pruebas con partidos pasados, las casas de apuestas acertaron más que el modelo. Úsalas como referencia principal.");
   else how.push("Estas probabilidades son del modelo estadístico (goles de las últimas temporadas). Sin cuotas de las casas no hay con qué compararlas.");
   if(cur.fromMkt&&cur.src!=="user") how.push("Resultado, goles, más o menos y ambos anotan están calculados a partir de las cuotas de las casas; en las pruebas salieron más precisos que los del modelo. Córners y tiros siguen siendo del modelo.");
