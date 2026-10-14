@@ -13,27 +13,10 @@ jobs:
           mkdir -p probe
           UA="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
           g(){ n="$1"; u="$2"; code=$(curl -sL -m 40 -A "$UA" -o "probe/$n" -w "%{http_code} %{size_download}" "$u" || echo ERR); echo "$n $u $code" >> probe/log.txt; sleep 2; }
-          g sg_premier.html https://www.sportsgambler.com/injuries/football/england-premier-league/
-          g sg_bundesliga.html https://www.sportsgambler.com/injuries/football/germany-bundesliga/
-          g sg_laliga.html https://www.sportsgambler.com/injuries/football/spain-la-liga/
-          g sg_ucl.html https://www.sportsgambler.com/injuries/football/champions-league/
-          g sg_mls.html https://www.sportsgambler.com/injuries/football/usa-major-league-soccer/
-          g sg_ligamx.html https://www.sportsgambler.com/injuries/football/mexico-liga-mx/
-          g sg_eredivisie.html https://www.sportsgambler.com/injuries/football/netherlands-eredivisie/
-          g sg_robots.txt https://www.sportsgambler.com/robots.txt
-          g tm_premier.html https://www.transfermarkt.com/premier-league/verletztespieler/wettbewerb/GB1
-          g tm_robots.txt https://www.transfermarkt.com/robots.txt
-          g fpl.json https://fantasy.premierleague.com/api/bootstrap-static/
-          python3 - <<'PY'
-          import json
-          try:
-              d=json.load(open("probe/fpl.json"))
-              inj=[e for e in d["elements"] if e["status"]!="a"]
-              json.dump({"keys":list(d.keys()),"el_keys":list(d["elements"][0].keys()),"teams":[(t["id"],t["name"],t["short_name"]) for t in d["teams"]],"types":d["element_types"],"n_inj":len(inj),"sample":inj[:12]},open("probe/fpl_sample.json","w"),ensure_ascii=False,indent=1)
-          except Exception as e:
-              open("probe/fpl_sample.json","w").write(str(e))
-          PY
-          rm -f probe/fpl.json
+          g sg_ucl.html https://www.sportsgambler.com/injuries/football/uefa-champions-league/
+          g sg_mls.html https://www.sportsgambler.com/injuries/football/usa-mls/
+          g sg_noruega.html https://www.sportsgambler.com/injuries/football/norway-eliteserien/
+          g sg_arabia.html https://www.sportsgambler.com/injuries/football/saudi-arabia-saudi-pro-league/
       - name: Subir a rama probe
         run: |
           git config user.name "picks-fresh-bot"; git config user.email "bot@users.noreply.github.com"
